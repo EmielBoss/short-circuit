@@ -1,0 +1,427 @@
+\documentclass[8pt, table, xcdraw]{article}%
+\usepackage[a4paper, top=1cm, bottom=4cm, left=2cm, right=2cm]{geometry}%
+\usepackage{amsfonts}
+\usepackage{fancyhdr}
+\usepackage{comment}
+\usepackage{times}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{changepage}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{parskip}
+\usepackage{listings}
+\usepackage{lscape}
+\usepackage{enumerate}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage[bottom]{footmisc}
+\usepackage[T1]{fontenc}
+\usepackage[export]{adjustbox}
+\usepackage{multirow}
+\usepackage{siunitx}
+\usepackage{subcaption}
+\usepackage{epsfig}
+\usepackage[normalem]{ulem}
+\useunder{\uline}{\ul}{}
+\usepackage[utf8]{inputenc}
+\usepackage{bigfoot}
+
+\lstset{
+ %frame=tb, % for the lines above and under the code snippets
+ language=SQL,
+ aboveskip=3mm,
+ belowskip=3mm,
+ showstringspaces=false,
+ columns=flexible,
+ basicstyle={\footnotesize\ttfamily},
+ numbers=none,
+ numberstyle=\tiny\color{gray},
+ keywordstyle=\color{blue},
+ commentstyle=\color{gray},
+ stringstyle=\color{purple},
+ breaklines=true,
+ breakatwhitespace=true,
+ literate={_}{\textunderscore}1 {([a-z])([A-Z])}{{\1}\allowbreak{\2}}{1},
+ tabsize=3,
+ escapeinside={/*!}{!*/},
+ escapebegin=\color{black}
+}
+
+\title{
+\textit{Short Circuit}\\
+\vspace{15px}
+\huge
+SQL\\
+% \vspace{20px}
+% \large
+% SQLBolt
+% \textcolor{gray}{}
+}
+\author{Summary by Emiel Bos}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+SQL, or Structured Query Language, is a  declarative, domain-specific programming language designed to query, manipulate, and transform data from a relational database. A \emph{relational database} represents a collection of related (two-dimensional) tables, each with a fixed number of named columns (the attributes or properties of the table) and any number of rows of data. The database \emph{schema} describes the structure of each table, and the datatypes that each column of the table can contain.
+
+All popular \emph{relational database management systems} (RDBMSs) -- SQLite, MySQL, Postgres, Oracle and Microsoft SQL Server -- support SQL. Because the SQL standard is large, complex, does not specify the database behavior in some important areas, defers some decisions to individual implementations, and is ambiguous for some construct semantics, all these RDBMS vendors use different implementations of SQL and therefore differ slightly in syntax, ruleset, and the kind of operators and functions they support. In particular, date and time syntax, string concatenation, \lstinline{NULL}s, and comparison case sensitivity vary from vendor to vendor. PostgreSQL and Mimer SQL strive for standards compliance, though PostgreSQL does not adhere to the standard in all cases. The most popular commercial and proprietary RDBMSs are Oracle (whose \lstinline{DATE} behaves as \lstinline{DATETIME} and lacks a \lstinline{TIME} type) and MS SQL Server (before the 2008 version). As a result, SQL code can rarely be ported between database systems without modifications.
+
+SQL may be informally partitioned into sublanguages, which are commonly: data query language (DQL), data manipulation language (DML), data definition language (DDL), and data control language (DCL). Each SQL statement can be broadly classified as belonging to one of these, and we will use this classification.
+
+\section{Data query language}
+
+A \emph{data query language} (DQL) are for performing queries on a database. SQL supports this with the \lstinline{SELECT} statement. DQL is often considered a part of a data manipulation language (DML), i.e., the \lstinline{SELECT} statement can also be considered a DML statement.
+
+\subsection{\lstinline{SELECT}}
+
+To \emph{query} a database, use the \lstinline{SELECT} and \lstinline{FROM} clauses, which yields a table:
+
+\begin{lstlisting}
+SELECT col, another_col, ...
+FROM table;
+\end{lstlisting}
+
+You can use \lstinline{*} to select all columns. Capitalizing commands is simply a convention that makes queries easier to read, but isn't enforced. The SQL standard defines that statements end with the semicolon statement terminator, though it's not required on every platform. Also, SQL treats one space, multiple spaces, or a line break as being the same thing. Columns names are typically lower case, and use underscores instead of spaces, because else you need to use double quotes. You can define aliases for column and table names in your result with the \lstinline{AS} keywords, although this keyword is optional and the SQL standard lets you use aliases with or without \lstinline{AS}, but without \lstinline{AS}, you cannot use a PostgreSQL keyword as alias. You can also use expressions to transform raw column values in a query with mathematical/arithmetic and string functions, and combine different column values (within the same row):
+
+\begin{lstlisting}
+SELECT col AS Column, another_col AS "Another Column",
+       (some_numerical_col + another_numerical_col) / 2.0 AS avg_col
+FROM long_table_name AS table;
+\end{lstlisting}
+
+You can round floating point numbers with \lstinline{ROUND(num, <precision>)}, e.g. \lstinline{ROUND(num, 2)} for rounding to three decimals. You can get the length of a string with \lstinline{CHAR_LENGTH(content)}. The \lstinline{DATEDIFF(date1, date2)} function returns the difference between two dates as an integer. You can convert between datatypes in queries using two types of syntax that do the same: \lstinline{CAST(column AS integer)} or \lstinline{column::integer}.
+
+You may specify multiple comma-separated table names in the \lstinline{FROM} clause (and you may specify the same name multiple times, though you need aliases in that case), which will result in a Cartesian product of the given tables, i.e. every row from any table is paired with every row from any other table.
+
+You can discard duplicate rows (taking only the values in the specified column(s) into account) by using the \lstinline{DISTINCT} keyword (you add one \lstinline{DISTINCT} keyword behind \lstinline{SELECT}, so not per individual column name), so you get all unique combinations of values across those columns:
+
+\begin{lstlisting}
+SELECT DISTINCT column, another_column, ...
+FROM mytable
+\end{lstlisting}
+
+\subsection{\lstinline{LIMIT}}
+
+The less results returned, the faster a query runs. The \lstinline{LIMIT} clause will reduce the number of rows to return, and the optional \lstinline{OFFSET} clause will specify where to begin counting the number rows from (useful for pagination of results):
+
+\begin{lstlisting}
+SELECT column, another_column, ...
+FROM table
+LIMIT 100 OFFSET 200;
+\end{lstlisting}
+
+\subsection{\lstinline{WHERE}}
+
+To filter results, use a \lstinline{WHERE} clause with one or more conditions (concatenated with \lstinline{AND} or \lstinline{OR}) that are applied to each row:
+
+\begin{lstlisting}
+SELECT column, another_column, ...
+FROM table
+WHERE
+/* Numerical conditions */
+      column >= 4 -- Standard numerical operators are supported
+  AND column BETWEEN 1.5 AND 10.5 -- Number is within range of two values (inclusive)
+  AND column >= 1.5 AND column <= 10.5 -- Same thing
+  AND column NOT BETWEEN 1 AND 10 -- Number is not within range of two values (inclusive)
+  AND column IN (2, 4, 6) -- Number exists in a list
+  AND column NOT IN (1, 3, 5); -- Number does not exist in a list
+/* Textual conditions */
+  AND column = "abc" -- Case sensitive exact string comparison (notice the single equals)
+  AND column != "abcd" -- Case sensitive exact string inequality comparison
+  AND column LIKE "ABC" -- Case insensitive exact string comparison
+  AND column NOT LIKE "ABCD" -- Case insensitive exact string inequality comparison
+  AND column LIKE "%AT%" -- % matches a sequence of zero or more characters (e.g. "AT", "ATTIC")
+  AND column LIKE "AN_" -- _ matches exactly one character (e.g. "AND", but not "AN")
+  AND column IN ("A", "B", "C") -- String exists in a list
+  AND column NOT IN ("D", "E", "F") -- String does not exist in a list
+\end{lstlisting}
+
+In some variants of SQL \lstinline{LIKE} is case-sensitive, and \lstinline{ILIKE} is case-insensitive.
+
+Full-text search is best left to dedicated libraries like Apache Lucene or Sphinx.
+
+\subsection{\lstinline{ORDER}}
+
+You can sort your results by one or more columns in ascending (\lstinline{ASC}, which is the default, so you can omit it) or descending (\lstinline{DESC}) order using the \lstinline{ORDER BY} clause. The results are sorted first by the column first specified, then the second, etc.:
+
+\begin{lstlisting}
+SELECT column, another_column, ...
+FROM table
+ORDER BY column DESC, another_column ASC, ...;
+\end{lstlisting}
+
+\subsection{\lstinline{JOIN}}
+
+Databases are often broken down into pieces and stored across multiple orthogonal tables using a process known as \emph{normalization}. The term "relational database" refers to the fact that the tables within it "relate" to one another; they contain common identifiers (\emph{keys}) that allow information from multiple tables to be combined easily. This minimizes duplicate data in any single table, and allows for data in the database to grow independently of each other. Tables that share information about a single entity need to have a \emph{primary key} -- a column -- that identifies that entity uniquely across the database. \lstinline{JOIN} clauses in a query combine row data across two separate tables using this unique key. \lstinline{INNER JOIN} matches rows from the first table and the second table which have the same key (as defined by the \lstinline{ON} constraint) to create a result row with the combined columns from both tables. \lstinline{INNER JOIN} is the default, so you can use \lstinline{INNER JOIN} and \lstinline{JOIN} interchangeably, but it's more readable if you write it out. A \lstinline{LEFT JOIN} includes all rows from the table in the \lstinline{FROM} clause regardless of whether a matching row is found in the table in the \lstinline{LEFT JOIN} clause. Vice versa for \lstinline{RIGHT JOIN}. In a \lstinline{FULL JOIN}, rows from both tables are kept, regardless of whether a matching row exists in the other table. You might see queries with \lstinline{LEFT/RIGHT/FULL OUTER JOIN}, but the \lstinline{OUTER} keyword is really kept for SQL-92 compatibility and is usually left out. There is also \lstinline{CROSS JOIN} for the Cartesian product, and this is the same as specifying multiple tables in the \lstinline{FROM} clause. It has no \lstinline{ON} clause because you're just joining everything to everything.
+
+\begin{lstlisting}
+SELECT column, another_table_col, ...
+FROM table AS t
+    INNER/LEFT/RIGHT/FULL JOIN another_table AS at ON t.id = at.id AND at.id > 5;
+\end{lstlisting}
+
+Conditions in the \lstinline{WHERE} clause are applied to the joined tables after the join, but you can filter one or both of the tables before joining them and create matches between the tables only under certain circumstances by adding additional conditions after \lstinline{ON}, as above. You can also match on multiple foreign keys, which is mainly used for complex performance reasons.\\
+You may also join a table with itself, e.g. by matching every row on a date column with a row from a day before.
+
+When working with multiple tables, column names across tables may have the same name. As demonstrated above, you can always prefix column names with the corresponding table or alias names, which is often necessary to prevent ambiguity errors, e.g. \lstinline{t.id} or \lstinline{table.*}.
+
+\lstinline{NULL}s indicate the absence of a value. When using \lstinline{LEFT/RIGHT/FULL JOIN}, you will likely have to write additional logic to deal with \lstinline{NULL}s in the result and constraints. An alternative to \lstinline{NULL}s is to have data-type appropriate default values in your database, e.g. 0 for numerical data, empty strings for text data, etc. You can test a column for \lstinline{NULL} values in a \lstinline{WHERE} clause with \lstinline{IS (NOT) NULL}. The \lstinline{IFNULL(expression, alt_value)} function is useful for dealing with \lstinline{NULL}s, which simply returns the given \lstinline{expression} if it isn't \lstinline{NULL}, and \lstinline{alt_value} if it is, e.g. \lstinline{IFNULL(maybenull, 0)}.
+
+You can also concatenate multiple (different types of) \lstinline{JOIN}s. \lstinline{JOIN}s are left associative, i.e. each subsequent join joins a new table to the derived table that is the result of all the joins before it.
+
+\subsection{\lstinline{GROUP}}
+
+You can use aggregate expressions (or functions) that allow you to summarize information about groups of rows, i.e. vertically, across rows:
+
+\begin{lstlisting}
+SELECT AGG_FUNC(column_or_expression) AS aggregate_description, ...
+FROM table
+GROUP BY column1, column2, ...;
+\end{lstlisting}
+
+The \lstinline{GROUP BY} clause works by grouping rows that have the same value(s) in the column(s) specified (so the order of column names doesn't matter, contrary to \lstinline{ORDER BY}). Each aggregate function runs on each group, so you get as many results as there are unique groups/values in the specified column. Without a specified grouping, each aggregate function is going to run on the whole set of result rows and return a single value. \lstinline{AGG_FUNCTION} can be any of \lstinline{COUNT} (counts the number of rows with non-\lstinline{NULL} values in the specified column; you can also use \lstinline{COUNT(*)} to count all rows), \lstinline{MIN}, \lstinline{MAX}, \lstinline{AVG} (ignores \lstinline{NULL}s), \lstinline{SUM} (treats \lstinline{NULL}s as 0s).\\
+The \lstinline{GROUP BY} clause is executed after the \lstinline{WHERE} clause, which filters the rows which are to be grouped. You can similarly filter the grouped rows with a \lstinline{HAVING} clause, of which the constraints are written the same way as \lstinline{WHERE} clauses; they're just applied to the grouped rows after the grouping rather instead of before.
+
+\begin{lstlisting}
+SELECT group_by_column, AGG_FUNC(column_expression) AS aggregate_result_alias, ...
+FROM table
+WHERE condition
+GROUP BY group_by_column
+HAVING group_condition;
+\end{lstlisting}
+
+You can use \lstinline{DISTINCT} when performing an aggregation, e.g. \lstinline{COUNT(DISTINCT month)} counts the unique values in the \lstinline{month} column and would return 12. It's worth noting that using \lstinline{DISTINCT}, particularly in aggregations, can slow your queries down quite a bit.
+
+Every column specified in the \lstinline{SELECT} clause must appear in \lstinline{GROUP BY}, except columns which appear inside aggregate functions. This makes sense, because SQL wouldn't know how to combine values within each group that are not grouped on but which are \lstinline{SELECT}ed, or which of those values within each groups to show.
+
+\subsection{\lstinline{UNION}}
+
+When working with multiple tables, the \lstinline{UNION (ALL)} operator allows you to append the rows of one query to those of another assuming that they have the same column count, order and data type. In other words, where \lstinline{JOIN}s allow you to combine two tables side-by-side, \lstinline{UNION}s allows you to stack one table on top of the other. Without the \lstinline{ALL}, duplicate rows between the tables will be removed from the result. The \lstinline{INTERSECT} operator will ensure that only rows that are identical in both result sets are returned, and the \lstinline{EXCEPT} operator will ensure that only rows in the first result set that aren't in the second are returned (i.e. it's query order-sensitive, like \lstinline{LEFT JOIN} and \lstinline{RIGHT JOIN}). Both \lstinline{INTERSECT} and \lstinline{EXCEPT} also discard duplicate rows after their respective operations, though some databases also support \lstinline{INTERSECT/EXCEPT ALL}. These operators are rarely used in practice.
+
+\begin{lstlisting}
+SELECT column, another_column
+FROM table
+
+UNION (ALL)/INTERSECT/EXCEPT
+
+SELECT other_column, yet_another_column
+FROM another_table
+\end{lstlisting}
+
+\subsection{Order of execution}
+
+Combining all the above ingredients in one query, we get the following blueprint, in which we denote the order of execution:
+
+\begin{lstlisting}
+SELECT DISTINCT column, AGG_FUNC(column_or_expression), ... -- 5: expressions here are only executed at step 5
+FROM mytable -- 1a: first executed to determine the total working set of data that is being queried
+    JOIN another_table  -- 1b: first executed to determine the total working set of data being queried
+    ON mytable.column = another_table.column
+WHERE constraint_expression -- 2: rows are filtered according to the applied constraints. Aliases in the SELECT part of the query are not yet accessible (in most RDBMSs); table aliases from FROM are available
+GROUP BY column -- 3: the reminaing rows are grouped based on common values in the specified column
+HAVING constraint_expression -- 4: groups are filtered according to the applied constraints. Aliases are still not yet accessible
+-- 6: of the remaining rows, rows with duplicate values in the column marked as DISTINCT will be discarded
+UNION (ALL)/INTERSECT/EXCEPT SELECT other_column, yet_another_column FROM another_table -- 7: append results
+ORDER BY column ASC/DESC -- 8: rows are then sorted by the specified data. You can reference SELECT aliases in this clause
+LIMIT count OFFSET COUNT; -- 9: rows that fall outside the range are discarded
+\end{lstlisting}
+
+\subsection{\lstinline{CASE}}
+
+SQL offers if-then-else functionality with \lstinline{CASE} expressions, which can occur in \lstinline{SELECT}, \lstinline{GROUP BY} and \lstinline{ORDER BY} clauses:
+
+\begin{lstlisting}
+SELECT OrderID, Quantity,
+(CASE
+    WHEN Quantity > 30 THEN 'The quantity is greater than 30'
+    WHEN Quantity = 30 THEN 'The quantity is 30'
+    ELSE 'The quantity is under 30'
+END AS QuantityText)
+FROM OrderDetails
+ORDER BY
+(CASE
+    WHEN City IS NULL THEN Country
+    ELSE City
+END);
+\end{lstlisting}
+
+\subsection{Subqueries}
+
+You can use SQL \emph{subqueries} for additional pre or post processing. A subquery must be fully enclosed in parentheses and can be referenced anywhere a normal table can be referenced: inside a \lstinline{FROM} clause, as a \lstinline{JOIN}, inside a \lstinline{WHERE} or \lstinline{HAVING} condition. When used in a condition, the subquery generally returns a one-cell result, except when using an \lstinline{IN} condition. You can alias subqueries to reference their results. You can test expressions against the results of the subquery, and you can use subqueries in expressions in the \lstinline{SELECT} clause, which allow you to return data directly from the subquery. They are generally executed in the same logical order as the part of the query that they appear in.
+
+\begin{lstlisting}
+SELECT *
+FROM sales_associates
+WHERE salary > 
+   (SELECT AVG(revenue_generated)
+    FROM sales_associates);
+\end{lstlisting}
+
+\emph{Correlated subqueries} reference and are dependent on a column or alias from the outer query. Unlike regular subqueries, each of these inner queries need to be run for each of the rows in the outer query, since the inner query is dependent on the current outer query row:
+
+\begin{lstlisting}
+SELECT *
+FROM employees
+WHERE salary > 
+   (SELECT AVG(revenue_generated)
+    FROM employees AS dept_employees
+    WHERE dept_employees.department = employees.department); -- The subquery needs to know what department each employee is in
+\end{lstlisting}
+
+\section{Data manipulation language}
+
+A \emph{data manipulation language} (DML) is for adding (inserting), deleting, and modifying (updating) data in a database. Querying is sometimes also considered a part of a DML.
+
+\subsection{\lstinline{INSERT}}
+
+You can insert new rows into a table with \lstinline{INSERT}, which declares which table to write into, the columns of data that we are filling, and one or more rows of data to insert. The number of values need to match the number of columns specified. If you don't specify any columns, each new row of data you insert should contain values for every corresponding column in the table. you can use mathematical and string expressions with the values that you are inserting:
+
+\begin{lstlisting}
+INSERT INTO table (column1, column2) -- Specifying columns is optional
+VALUES (row1_value_or_expr1, row1_value_or_expr2),
+        (row2_value_or_expr1, row2_value_or_expr2 / 10); -- Can be any number of rows
+\end{lstlisting}
+
+\subsection{\lstinline{UPDATE}}
+
+\lstinline{UPDATE} takes multiple column-value pairs and applies those changes to each and every row that satisfies the constraint in the WHERE clause. If you leave out the \lstinline{WHERE} clause, you will update all rows.
+
+\begin{lstlisting}
+UPDATE table
+SET column = value_or_expr, other_column = another_value_or_expr
+WHERE condition;
+\end{lstlisting}
+
+\subsection{\lstinline{DELETE}}
+
+\lstinline{DELETE} is similar to \lstinline{UPDATE}, but doesn't need \lstinline{SET}. Omitting the \lstinline{WHERE} clears the whole table.
+
+\begin{lstlisting}
+DELETE FROM table
+WHERE condition;
+\end{lstlisting}
+
+\section{Data definition language}
+
+A \emph{data definition language} (DDL) is a syntax for creating and modifying database objects such as tables, indices, and users. A \emph{database schema} (but colloquially also referred to simply as a 'schema') is the structure/blueprint of a database; the tables, their columns/attributes and associated constraints and data types, and the relationships between tables. This kind of schema is typically defined in a \lstinline{.sql} or \lstinline{.ddl} file containing \lstinline{CREATE TABLE} statements. Another example of a DDL is XML.
+
+\subsection{\lstinline{CREATE TABLE}}
+
+You can create a new table with \lstinline{CREATE TABLE}. Use \lstinline{IF NOT EXISTS} to suppress errors and skip creating the table if one with the same name already exists. Every line inside the statement defines a column (or a table-wide constraint).
+
+\begin{lstlisting}
+CREATE TABLE [IF NOT EXISTS] table (
+    <column1> <datatype> <column_constraint>,
+    <column2> <datatype> <column_constraint>
+    [, <table_contraint>]
+);
+\end{lstlisting}
+
+A \lstinline{<datatype>} can be any of \lstinline{INTEGER}, \lstinline{BOOLEAN}, \lstinline{FLOAT}, \lstinline{DOUBLE}, \lstinline{REAL}, \lstinline{TEXT}, \lstinline{CHARACTER(max_num_chars)}, \lstinline{VARCHAR(max_num_chars)}, \lstinline{DATE}, \lstinline{DATETIME}, \lstinline{DEFAULT <default_value>}, \lstinline{BLOB} (Binary Large OBject, often opaque to the database, so you usually have to store them with the right metadata to requery them).
+
+Constraints can be column-specific (in which case they're defined on the corresponding line of the column) or apply to the whole table (in which case they're defined on a separate line. Column constraints can refer to only one column, table constraints can refer to multiple columns. With the exception of \lstinline{NOT NULL}, both types of constraint can be any of:
+
+\begin{itemize}
+    \item \lstinline{PRIMARY KEY}; the values in this column are unique, and each value can be used to identify a single row in this table. These are implicitly \lstinline{NOT NULL} and \lstinline{UNIQUE}. You can only have one primary key, but you can have multiple columns in your primary key by declaring it as a table constraint like \lstinline{PRIMARY KEY(<some_column>, <another_column)}.
+    \item \lstinline{AUTOINCREMENT}; integer values are automatically filled in and incremented with each row insertion. Not supported in all databases.
+    \item \lstinline{UNIQUE}; the values in this column have to be unique, so you can't insert another row with the same value in this column as another row in the table.
+    \item \lstinline{NOT NULL}; inserted values can't be \lstinline{NULL}. If they can be \lstinline{NULL}, you can optionally specify the \lstinline{NULL} column constraint to make this explicit.
+    \item \lstinline{CHECK(<expression>)}; checks the expression on inserted rows for validity. You can also put a \lstinline{CHECK} on a separate row to enforce a condition on an entire record.
+    \item \lstinline{FOREIGN KEY}; a consistency check which ensures that each value in this column corresponds to another value in a column in another table.
+\end{itemize}
+
+You can optionally name constraints with the \lstinline{CONTRAINT <contraint_name>} keyword right before the constraint definition. Whenever you want to remove a constraint with the \lstinline{ALTER TABLE} command, you specify it with this name. If a name isn't supplied, the DBMS will automatically generate a constraint name, but you will have to look up its generated name in the database's metadata first if you ever want to remove it.
+
+\subsection{\lstinline{ALTER TABLE}}
+
+You can update an existing table's schema with \lstinline{ALTER TABLE}, which supports a number of operations. You can add columns:
+
+\begin{lstlisting}
+ALTER TABLE table
+ADD <another_column> <datatype> [column_constraint];
+\end{lstlisting}
+
+Default value constraints are applied to existing and new rows.\\
+In some databases like MySQL, you can specify where to insert the new column using the \lstinline{FIRST} or \lstinline{AFTER} clauses, though this is not standard.
+
+You can drop a constraint:
+
+\begin{lstlisting}
+ALTER TABLE table
+DROP CONSTRAINT <constraint_name>; 
+\end{lstlisting}
+
+You can drop columns:
+
+\begin{lstlisting}
+ALTER TABLE table
+DROP column_to_be_deleted;
+\end{lstlisting}
+
+Some databases (including SQLite) don't support this feature, so you may have to create a new table and migrate the data over.
+
+You can rename tables:
+
+\begin{lstlisting}
+ALTER TABLE table
+RENAME TO new_table_name;
+\end{lstlisting}
+
+\subsection{\lstinline{DROP TABLE}}
+
+You delete a table with:
+
+\begin{lstlisting}
+DROP TABLE [IF EXISTS] table;
+\end{lstlisting}
+
+If you have another table that is dependent on columns in the table you are removing, then you will have to either remove the dependent rows from those tables or remove them entirely.
+
+\subsection{\lstinline{CREATE SCHEMA}}
+
+Besides being used in a broader design sense to refer to the structure of a database's tables, the word 'schema' is also confusingly used to refer to the concept of a namespace in a database. MySQL uses the word 'schema' interchangeably with 'database', such that \lstinline{CREATE SCHEMA} and \lstinline{CREATE DATABASE} are aliases for the same command. In SQL Server and PostgreSQL, \lstinline{CREATE DATABASE} really does create a database and \lstinline{CREATE SCHEMA} creates a new schema entity in the current database.\\
+In PostgreSQL a database contains one or more named schemas, which in turn contain tables and other kinds of named objects (e.g. data types, functions, views, operators, etc.). A schema can be considered a namespace; within one schema, two objects of the same type cannot have the same name. Whereas a client connection to a server can only access data in a single database (the one specified in the connection request), schemas are not rigidly separated, and therefore a user can access objects in any of the schemas in the database they are connected to (if they have the priviliges). You can use schemas to allow many users to use one database without interfering with each other, to organize database objects into logical groups to make them more manageable, or for putting third-party applications into separate schemas so they do not collide with the names of other objects. Schemas are analogous to directories at the operating system level, except that schemas cannot be nested.
+
+\begin{lstlisting}
+CREATE SCHEMA some_schema;
+\end{lstlisting}
+
+You can refer to tables as \lstinline{schema.table}, or, even more generally, as \lstinline{database.schema.table}.
+
+\section{Data control language}
+
+A \emph{data control language} (DCL) is used to control access to data stored in a database (authorization).
+
+\subsection{\lstinline{GRANT}}
+
+Gives specified permissions for the table (and other objects) to, or assigns a specified role with certain permissions to, specified groups or users of a database.
+
+\begin{lstlisting}
+GRANT SELECT, INSERT, UPDATE, DELETE on Employees TO User1
+\end{lstlisting}
+
+\subsection{\lstinline{REVOKE}}
+
+Takes away specified permissions for the table (and other objects) to, or takes away a specified role with certain permissions to, specified groups or users of a database.
+
+\begin{lstlisting}
+REVOKE INSERT On Employees TO User1
+\end{lstlisting}
+
+\subsection{\lstinline{DENY}}
+
+Denies a specified permission to a security object.
+
+\begin{lstlisting}
+DENY UPDATE On Employees TO User1
+\end{lstlisting}
+
+\end{document}

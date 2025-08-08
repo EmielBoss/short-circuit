@@ -1,0 +1,418 @@
+\documentclass[8pt, table, xcdraw]{article}%
+\usepackage[a4paper, top=1cm, bottom=4cm, left=2cm, right=2cm]{geometry}%
+\usepackage{amsfonts}
+\usepackage{fancyhdr}
+\usepackage{comment}
+\usepackage{times}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{changepage}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{parskip}
+\usepackage{listings}
+\usepackage{lscape}
+\usepackage{enumerate}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage[bottom]{footmisc}
+\usepackage[T1]{fontenc}
+\usepackage[export]{adjustbox}
+\usepackage{multirow}
+\usepackage{siunitx}
+\usepackage{subcaption}
+\usepackage{epsfig}
+\usepackage[normalem]{ulem}
+\useunder{\uline}{\ul}{}
+\usepackage[utf8]{inputenc}
+\usepackage{bigfoot}
+
+\lstset{
+ %frame=tb, % for the lines above and under the code snippets
+ language=C,
+ aboveskip=3mm,
+ belowskip=3mm,
+ showstringspaces=false,
+ columns=flexible,
+ basicstyle={\footnotesize\ttfamily},
+ numbers=none,
+ numberstyle=\tiny\color{gray},
+ keywordstyle=\color{blue},
+ commentstyle=\color{gray},
+ stringstyle=\color{purple},
+ breaklines=true,
+ breakatwhitespace=true,
+ literate={_}{\textunderscore}1 {([a-z])([A-Z])}{{\1}\allowbreak{\2}}{1},
+ tabsize=3,
+ escapeinside={/*!}{!*/},
+ escapebegin=\color{black}
+}
+
+\title{
+\textit{Short Circuit}\\
+\vspace{15px}
+\huge
+Git\\
+\vspace{20px}
+\large
+Pro Git\\
+by Scott Chacon \& Ben Straub\\
+Second Edition\\
+\textcolor{gray}{Up until Section 7.1\\Already did Section 7.3\\Half-assed Section 4.1}
+}
+\author{Summary by Emiel Bos}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Intro}
+
+For command line notation, we use \lstinline{<>} for required arguments and \lstinline{[]} for optional arguments. \lstinline{|}-separators indicate mutually exclusive items, usually used to show the full option name and its shorthand.
+
+\section{Basics}
+
+\emph{Local Version Control Systems} (LVCSs) are simply local databases that track version control of files (on the same system). \emph{Centralized Version Control Systems} (CVCSs) like CVS, Subversion and Perforce, have a single server that contains the versioned files, and therefore allow clients collaborating on and checking out files from that central place, which only stores mere snapshots locally. Both constitute a single point of failure, and therefore \emph{Distributed Version Control Systems} (DVCSs) like Git, Mercurial, Bazaar or Darcs, fully mirror the project and its full history. However, where other DVCSs treat a project as a set of files and store different versions as a list of changes to the original versions of these files on a per-file basis (this is called delta-based version control), Git instead treats a project as a miniature filesystem, and stores different versions as snapshots. Each snapshot stores the entire project at that moment, and only omits files that haven't changed and simply links to a previous identical file. This has benefits for branching.\\
+A snapshot is created by \hyperref[commit]{committing}\footnote{The word "commit" is often used synonymously with "snapshot (pointed to by a commit)".}, which creates a \lstinline{commit} object containing author name and e-mail, commit message, pointers to the (parent) commit(s) that precede it -- zero parents for the initial commit, one parent for a normal commit, and multiple parents for a commit that results from a merge of two or more branches -- and a pointer to the root \lstinline{tree} object that represent the actual project. This tree corresponds to the project's directory structure; each subdirectory is checksummed and stored recursively as another \lstinline{tree} object, each of which stores a list of its containing subdirectories as \lstinline{tree} object and files as \lstinline{blob} objects, which store the file itself and it's checksum.
+
+Because the entire history of a project is stored locally, most operations don't need to communicate to other computers.\\
+Everything in Git is checksummed with SHA-1 before it is stored and is then referred to by that checksum. Therefore, \hyperref[commit]{commit} IDs are hashes.\\
+Git is designed such that almost all operations only add data, making it very hard to screw something up irreversibly.
+
+\subsection{File states} \label{states}
+
+Files in an initialized repository can be either tracked or untracked, which basically means whether Git knows about them. A tracked file is either \hyperref[add]{a newly tracked file} or a file that was in the previous commit. A tracked file in Git always has one of three states:
+
+\begin{itemize}
+    \item Modified, meaning the file has been changed since the last commit. These are the files you work on in your working directory.
+    \item Staged, meaning the (modified) file is added to the staging area (also in the \lstinline{.git} directory) and marked in its current version to go into your next commit snapshot. The staging area is basically a waiting room for the next commit.
+    \item Committed, or Unmodified, meaning a file is safely stored in your local database: the \lstinline{.git} directory where Git stores the metadata and object database of the project.
+\end{itemize}
+
+\subsection{\lstinline{git config} -- configuring} \label{config}
+
+Gets and sets configuration variables. There are three types of configuration variables, set with the following options:
+
+\begin{itemize}
+    \item \lstinline{--system} variables; for all users and repositories on the system, stored in \lstinline{<path>/etc/gitconfig}.
+    \item \lstinline{--global} variables; for individual users, stored in \lstinline{~/.gitconfig} or \lstinline{~/.config/git/config}.
+    \item \lstinline{--local} variables; for individual repositories, stored in a repo's \lstinline{.git/config}. This is the default.
+\end{itemize}
+
+You can define variables by running \lstinline{git config --<type> <variable> <value>}. Running only \lstinline{git config <variable>} gives you that variable's value. More specifically defined variables override more general ones. You can view all settings with the \lstinline{--list} option and where they are coming from (i.e. which configuration file has highest priority) with the \lstinline{--show-origin} option.
+
+Every Git commit uses your user name, stored in the \lstinline{user.name} variable, and your e-mail, stored in the \lstinline{user.email} variable.\\
+If you want to use a different editor than the system's default, set the \lstinline{core.editor} variable (e.g. with \lstinline{emacs} as value).\footnote{On wIndows, you must specify the full path to the editor's executable.}\\
+The merge conflict GUI to use when using \hyperref[mergetool]{git mergetool} is stored in the \lstinline{merge.tool} variable.\\
+The default branch name is stored in the \lstinline{init.defaultBranch} variable.\\
+The default remote name is stored in the \lstinline{clone.defaultRemoteName} variable.\\
+\lstinline{pull.rebase} is a boolean indicating whether to rebase when \hyperref[pull]{pulling}.\\
+Use \lstinline{git config --global alias.<alias> 'command'} to create an alias for the supplied (sub)command, which can be any Git subcommand and any other command if prefixed with the \lstinline{!} character. Then, if you type \lstinline{git <alias> (other stuff...)}, Git will replace the alias with the subcommand. Some useful examples:
+
+\begin{lstlisting}
+git config --global alias.unstage 'reset HEAD --'
+git config --global alias.last 'log -1 HEAD'
+\end{lstlisting}
+
+\subsection{\lstinline{.gitignore}} \label{gitignore}
+
+\lstinline{.gitignore} text files in a Git repository tells Git which files to exclude. It is possible to have multiple \lstinline{.gitignore} in subdirectories, but mostly one in the root directory is sufficient.
+
+\begin{lstlisting}
+/file.txt # Ignore "file.txt" in the current directory
+file.txt # Ignore any "file.txt"
+/directory/ # Ignore directory "directory" in the root directory
+directory/ # Ignore any "directory"
+ancestor/**/descendant/ # Ignore any directory named "descendant" inside directory "ancestor" and its subdirectories
+*~ # Ignore any files ending with a tilde (often used to mark temp files)
+*.<oa> # Ignore any files ending in ".o" or ".a"
+!lib.a # Track files named "lib.a" regardless (! is negation)
+\end{lstlisting}
+
+\subsection{\lstinline{git clone} -- cloning existing repository}
+
+In order to "clone" (copy) an existing repository, use \lstinline{git clone <url> [name]} followed by the repository's \hyperref[protocols]{URL}. This creates a new subdirectory in whatever directory it is run (named after the project by default or using the optional name argument), initializes a \lstinline{.git} directory inside it, pulls down the data (a full copy by default; every version of every file) for that repository, checks out a working copy of the latest version, adds the source \hyperref[remote]{remote} from which is cloned as \lstinline{origin} by default, and sets the \lstinline{master} branch as tracking branch. \lstinline{origin} is just the default remote name; use the \lstinline{-o|--origin <name>} option to name the repository something different. \\
+In practice, you'll likely be using the \lstinline{https://} protocol, but you can also use \lstinline{git://} or \lstinline{user@server: path/to/repo.git}, which uses SSH.\\
+All files will be in the  \hyperref[states]{Committed} state.
+
+\subsection{\lstinline{git init} -- initializing regular directory} \label{init}
+
+To turn a regular directory into a Git repository, \lstinline{cd} into it and run \lstinline{git init}. This creates a \lstinline{.git} subdirectory. Nothing is tracked yet.
+
+\subsection{\lstinline{git add} -- tracking files} \label{add}
+
+\lstinline{git add} is a multipurpose command, meant to make files \hyperref[states]{Staged} for the next commit. Running it on untracked files will make them tracked and \hyperref[states]{Staged}. Running it on \hyperref[states]{Modified} files will make those files \hyperref[states]{Staged} exactly how they are at that point. This means those versions will go into the commit, and changing a \hyperref[states]{Staged} file before the next commit will lead to it being both \hyperref[states]{Staged} and \hyperref[states]{Modified}, with those latest modifications not going into the commit.
+
+Run \lstinline{git add <name>} with the filename you want to add, or with a directory name, in which case all files in it are added recursively. Similar to the \hyperref[gitignore]{\lstinline{.gitignore}}, it can take any Glob pattern (\lstinline{git add .} adds everything recursively from the root directory).\\
+This does not untrack deleted files; use\lstinline{git add --update|-u} to remove deleted files in addition to staging modified files, or use \lstinline{git add --all|-A} to do it all: adding and staging everything not in the \hyperref[gitignore]{\lstinline{.gitignore}} and remove deleted files.
+
+\subsection{\lstinline{git rm} -- untracking files} \label{remove}
+
+\lstinline{git rm <name>} untracks a file, i.e. removes it from the staging area, or, stages the file's removal. It also removes the actual file from the hard drive; use the \lstinline{--cached} to keep the file itself. The next \hyperref[commit]{\lstinline{git commit}} will actually remove the file.\\
+If you modified the file or already added it to the staging area, you must force the removal with the \lstinline{--force|-f} option. (This is a safety feature to prevent accidental removal of data that is in no commit (yet) and therefore wouldn't be recoverable.
+
+\subsection{\lstinline{git mv} -- moving and renaming files} \label{move}
+
+A convenience function that can move or rename files: \lstinline{git mv <old> <new>} moves or renames a file from the first to the last argument. However, this is kind of superfluous, as Git is smart enough to detect any rename and/or move operations using other commands or using the folder explorer.
+
+\subsection{\lstinline{git commit} -- committing} \label{commit}
+
+Records a snapshot of the repository by committing the staging area.\footnote{Often, and also in this summary, "commit" is often synonymous with "snapshot (pointed to by a commit)".} All files transition from \hyperref[states]{Staged to Committed}.\\
+Running plain \lstinline{git commit} launches the editor as set in the \hyperref[config]{\lstinline{core.editor}} variable (which usually is Vim er Emacs) for you to write your commit message (the commented lines are not included). You can also type your commit message inline with the \lstinline{--message|-m} option, after which you should supply your message as a \lstinline{"}-delimited string.\\
+Because going through the staging area is sometimes a bit cumbersome and superfluous for a workflow, adding the \lstinline{--all|-a} option makes Git automatically stage every file that is already tracked before doing the commit, avoiding a \hyperref[add]{\lstinline{git add --all|-A}}. This does not track/stage new files, though, so if you want a commit that reflects your working directory, you should still run \lstinline{git add --all|-A} beforehand.
+
+The \lstinline{--amend} option replaces the last commit with the current one, i.e. it basically redoes the last commit, handy if you have additional (staged) changes you forgot to include. Amending previously pushed commits may cause problems for your collaborators; use with cation.
+
+\subsection{\lstinline{git status} -- showing (file) state} \label{status}
+
+Running \lstinline{git status} tells you which branch you're on, whether that branch diverges from the one on the server, whether you have untracked files in the directory, whether you have files \hyperref[states]{Staged} to be \hyperref[commit]{committed}, whether you have \hyperref[states]{Modified} files not staged for a commit, and whether you have unmerged paths (files) as a result of a \hyperref[merge]{merge conflict}.\\
+Running with the \lstinline{--short|-s} option gives a much less verbose output, a list of files with their \hyperref[state]{state} in the staging area and their \hyperref[state]{state} in the working tree as the first and second column respectively. \lstinline{?} indicates untracked next to them, \lstinline{A} indicates added/\hyperref[states]{Staged}, \lstinline{M} indicates modified.
+
+\subsection{\lstinline{git diff} -- showing changes}
+
+Basically a much more sophisticated \hyperref[status]{\lstinline{git status}}. Shows actual code changes.\\
+Running \lstinline{git diff} tells you what you've \hyperref[states]{Modified} but not yet \hyperref[states]{Staged} by comparing what is in your working directory with what is in your staging area. (If you've staged all of your changes, \lstinline{git diff} will give you no output.)\\
+Running \lstinline{git diff --staged} tells you what is \hyperref[states]{Staged} and ready for commit by comparing your staged changes to your last commit. The \lstinline{--cached} option is synonymous.
+
+\subsection{\lstinline{git difftool} -- showing changes in a GUI}
+
+For running \lstinline{git diff} in a GUI. Use \lstinline{git difftool --tool-help} to see which GUIs are available on your system.
+
+\subsection{\lstinline{git log} -- showing commit history}
+
+\lstinline{git log} without arguments lists the current \hyperref[branching]{branch}'s commits in reverse chronological order (i.e. latest first). Each commit displays checksum, author’s name and email, date, and message.\\
+The \lstinline{--patch|-p} option additionally displays the patch (i.e. the diff, or difference) introduced by each commit.\\
+The \lstinline{-<n>} option displays only the last $n$ commits.\\
+The \lstinline{--since|--after} and \lstinline{--until|--before} allow for specifying a timeframe in lots of formats, e.g. \lstinline{--since="2 years 1 day 3 minutes ago"}.\\
+The \lstinline{--author} option allows for filtering by author. The \lstinline{--grep} option allows for filtering commit messages by keywords. More than one instances of these options are allowed.
+The \lstinline{--stat} option shows abbreviated stats under each commit: a list of modified files, how many files were changed, and how many lines in those files were added and removed. \lstinline{--shortstat} display \textit{only} the changed/insertions/deletions line.\\
+The \lstinline{--pretty} option is for pretty-printing: \lstinline{--pretty=oneline} prints each commit on one line; \lstinline{short}, \lstinline{full}, and \lstinline{fuller} dictates the verbosity/brevity of the output; and with \lstinline{format} you can specify the output explicitly (handy for machine parsing), e.g.:
+
+\begin{lstlisting}
+$ git log --pretty=format:"%h - %an, %ar : %s"
+ca82a6d - Scott Chacon, 6 years ago : Change version number
+\end{lstlisting}
+
+Useful specifiers are listed \href{https://git-scm.com/book/en/v2/Git-Basics-Viewing-the-Commit-History#pretty_format}{here}.
+
+The \lstinline{format} and \lstinline{oneline} options are especially useful in conjunction with the \lstinline{--graph} option, which adds a nice little ASCII graph showing your branch and merge history next to the list of commits.\\
+\lstinline{--abbrev-commit} shows only the first few characters of the checksum.\\
+\lstinline{--oneline} is a shorthand for \lstinline{--pretty=oneline --abbrev-commit}.\\
+\lstinline{--relative-date} displays the date in a relative format (e.g. "2 weeks ago").\\
+The \lstinline{--S} option shows only those commits that changed the number of occurrences of that string.\\
+\lstinline{git log <options> -- path/to/file_or_dir} shows only commits that introduced a change to those files.
+
+\lstinline{git log} only shows the current \hyperref[branching]{branch}'s (\hyperref[branching]{\lstinline{HEAD}} commit history. Use \lstinline{git log <name>} to show the commit history of the specified branch. Use \lstinline{--all} to show all the branches.\\
+Use \lstinline{--decorate} to see to which branch \hyperref[branching]{\lstinline{HEAD}} is pointing.
+
+\subsection{\lstinline{git reset} -- undoing} \label{reset}
+
+\lstinline{git reset --hard} reverts the entire working directory to \hyperref[branching]{\lstinline{HEAD}}, which is the latest commit on the current branch, i.e. you're undoing all changes since the latest commit.\\
+You can also specify a different commit than \lstinline{HEAD}.
+\lstinline{git reset HEAD <file>} unstages a staged file.
+
+\lstinline{git reset <commit>} without a \lstinline{--hard} or \lstinline{--soft} moves your \lstinline{HEAD} to point to the specified commit, without changing any files. E.g. \lstinline{git reset HEAD^} will get rid of the last commit but keeps its changes.
+
+\subsection{\lstinline{git restore} -- restoring files} \label{restore}
+
+\lstinline{git restore --staged <file>} unstages a staged file. (Basically supercedes \hyperref[reset]{\lstinline{git reset HEAD <file>}}.)\\
+Use \lstinline{git restore <file>} to undo any local changes made in the file since -- and revert back to the version at -- the last commit. (Basically supercedes \hyperref[checkout]{\lstinline{git checkout -- <file>}}.)
+Contrary to \hyperref[reset]{\lstinline{reset}}, \lstinline{restore} does not update the current branch.
+
+\subsection{\lstinline{git tag} -- tagging} \label{tag}
+
+You can tag commits, usually used to mark release versions. There are two types:
+
+\begin{enumerate}
+    \item a \emph{lightweight tag} is just a pointer to a commit.\\
+    Create a lightweight tag with \lstinline{git tag <tag> [commit]} without any other options.
+    \item an \emph{annotated tags} is a full object that additionally stores checksum; tagger name, e-mail, and data; message; and optional GNU Privacy Guard (GPG) signature.\\
+    Create an annotated tag with the \lstinline{--annotate|-a} option: \lstinline{git tag -a <tag> [commit]} optionally with \lstinline{-m "message"}.
+\end{enumerate}
+
+In both cases, omitting the optional commit argument just tags the latest commit (\hyperref[branching]{\lstinline{HEAD}}).\\
+\lstinline{git tag} lists existing tags in alphabetical order (supplying \lstinline{--list|-l} is optional).\\
+If you wanna pattern search, use \lstinline{--list|-l} with a \lstinline{"}-delimited pattern string (in which \lstinline{*} is a wildcard).\\
+Use the \lstinline{--delete|-d} option to delete a specified tag.\\
+Adding and deleting tags on a remote is done using \hyperref[push]{\lstinline{git push}}.
+
+\subsection{\lstinline{git show} -- showing tags} \label{show}
+
+\lstinline{git show <tag>} displays the specified tag's commit, and -- if its annotated -- also the tagger information, tag date, and message.
+
+\subsection{\lstinline{git stash} -- temporarily putting away work without committing} \label{stash}
+
+Useful if you want to work on something else without creating a commit. Use \lstinline{git stash} (which is equivalent to \lstinline{git stash push}) to save the dirty state of your working directory (i.e. your modified tracked files and staged changes) on a stack of such \emph{stashes} that you can reapply at any time, even on a different branch. Use \lstinline{--keep-index} to also leave all staged content in the index as well. Use \lstinline{-include-untracked|-u} to also include untracked files in the stash. This will not include explicitly \hyperref[gitignore]{ignored} files; to include those as well, use \lstinline{--all|-a}. The \lstinline{--patch} option will interactively prompt you which of the changes you would like to stash and which you would like to keep in your working directory.
+
+Use \lstinline{git stash list} to list all stashes on the stack in order of recency (e.g. \lstinline|stash@{0}| is the latest stash), together with the branch in which it was stashed and the latest commit at that time (i.e. the commit onto which the stash was built).
+
+Use \lstinline{git stash apply [stash]} to replay the changes of the specified stash on the current branch. Of no stash is specified, the most recent is applied. May result in merge conflicts. Files that were previously staged won't be automatically restaged; use the \lstinline{--index} option to restage those. \lstinline{git stash apply} will not remove the stash; use \lstinline{git stash drop} to remove it. Use \lstinline{git stash pop} to both apply and then drop the stash.
+
+\lstinline{git stash branch <newbranch> [stash]} creates a new branch, checks out the commit on which the stash was created, applies the stash and drops it if it applies successfully.
+
+\subsection{\lstinline{git clean} -- cleaning working directory} \label{clean}
+
+Removes untracked files from your working directory. Use option \lstinline{-d} to recurse into untracked directories as well; this requires \lstinline{--force|-f} if \hyperref[config]{\lstinline{clean.requireForce}} is set to \lstinline{true}. Use \lstinline{--dry-run|-n} to see what would be removed without actually doing it. Add option \lstinline{-x} to also remove \hyperref[gitignore]{\lstinline{.gitignore}d} files. \lstinline{-i} will run \lstinline{git clean} interactively.
+
+\section{Branching} \label{branching}
+
+A branch in Git is simply a lightweight, movable (simple file that contains a 40 character SHA-1 checksum) pointer to a commit. The default branch name is \lstinline{master} by default\footnote{GitHub started using \lstinline{main} in 2020 to avoid negative connotations.}, but this can be changed in the \lstinline{init.defaultBranch} \hyperref[config]{config} variable. Git maintains which local branch you're on in the \lstinline{HEAD} pointer, which point to the latest commit (tip) of that branch.
+
+\lstinline{HEAD~[n]} is used to refer to \lstinline{HEAD}'s \lstinline{n}'th ancestor commit, i.e. \lstinline{HEAD~} = \lstinline{HEAD~1} refers to \lstinline{HEAD}'s parent commit, \lstinline{HEAD~2} = \lstinline{HEAD~~} = \lstinline{HEAD~1~1} to \lstinline{HEAD}'s grandparent, etc. At a merge commit, which has more than one parent, the first/leftmost parent is traversed (the order of parents can be obtained by \hyperref[show]{\lstinline{git show}}).\\
+\lstinline{HEAD^[n]} is used to refer to \lstinline{HEAD}'s \lstinline{n}'th parent, starting from the left, i.e. \lstinline{HEAD^} = \lstinline{HEAD^1} refers to \lstinline{HEAD}'s first parent, \lstinline{HEAD^2} = \lstinline{HEAD^^} = \lstinline{HEAD^1^1} to \lstinline{HEAD}'s second parent, etc. Note that \lstinline{HEAD~} equals \lstinline{HEAD^}. In general, you'll mostly use \lstinline{~} to go back a number of generations, and you may need \lstinline{^} at merge commits if you want to traverse a parent other than the first. You can also chain the two notations interchangeably, as demonstrated by this example:
+
+\begin{lstlisting}
+G   H   I   J
+ \ /     \ /
+  D   E   F
+   \  |  / \
+    \ | /   |
+     \|/    |
+      B     C
+       \   /
+        \ /
+         A
+A =      = A^0
+B = A^   = A^1     = A~1
+C = A^2
+D = A^^  = A^1^1   = A~2
+E = B^2  = A^^2
+F = B^3  = A^^3
+G = A^^^ = A^1^1^1 = A~3
+H = D^2  = B^^2    = A^^^2  = A~2^2
+I = F^   = B^3^    = A^^3^
+J = F^2  = B^3^2   = A^^3^2
+\end{lstlisting}
+
+It's also possible for \lstinline{HEAD} to point to a specific commit rather than a branch, which is knows as a \hyperref[checkout]{detached \lstinline{HEAD}} (and you can only get yourself in this state using \hyperref[checkout]{\lstinline{checkout}}).
+
+\subsection{\lstinline{git branch} -- branch management} \label{branch}
+
+\lstinline{git branch} without additional arguments lists all local branches, with \lstinline{*} indicating the current \hyperref[branching]{\lstinline{HEAD}} branch. Supplying the \lstinline{-v|--verbose} option additionally lists the latest commit per branch. \lstinline{-vv} lists the \hyperref[remotes]{remote-tracking branch} a branch may track and the number of commits are ahead or behind that branch (note that this command itself doesn't communicate to the remote and only tells what it has cached since the last \hyperref[fetch]{fetch}). The \lstinline{--merged} and \lstinline{--no-merged} options filter the list to branches that you have or have not yet merged into the current \hyperref[branching]{\lstinline{HEAD}} branch. Using \lstinline{--merged} or \lstinline{--no-merged} with a specific branch name shows the list with respect to that branch.
+\lstinline{git branch <name>} creates a branch pointing to the current commit (but doesn't switch to it).\\
+Use \lstinline{git branch (--delete|-d) <name>} to delete the specified branch. This will fail if the specified branch has unmerged work; use \lstinline{-D} (shorthand for \lstinline{--delete --force}) to delete it anyways.\\
+To rename a branch locally (and keep its history), use \lstinline{git branch --move <old_name> <new_name>}. Use \lstinline{git push --set-upstream origin <new_name>} to push the renamed branch to the remote, and \lstinline{git push origin -d <old_name>} to remove the old branch from the remote. Do not rename branches that are still in use by other collaborators.\\
+To (retroactively) make a branch a \hyperref[remotes]{tracking branch}, you can use the \lstinline{-u|--set-upstream-to} option with the specified \hyperref[remotes]{remote-tracking branch}.
+
+\subsection{\lstinline{git switch} -- switching branches} \label{switch}
+
+Use \lstinline{git switch <name>} to switch to the specified, existing branch, i.e. move \hyperref[branching]{\lstinline{HEAD}} to point to the specified branch and change files in the working directory accordingly. Use option \lstinline{--create|-c} to additionally create the branch, avoiding a \lstinline{git branch} command.\\
+Use \lstinline{git switch -} to return to your previously checked out branch.
+
+\lstinline{git switch} was introduced in Git 2.23 to clear some of the confusion that comes from the many overloaded usages of checkout (switching branches, restoring files, detaching HEAD, etc.), i.e. it does exactly the same as a subset of \lstinline{git switch}'s functionality, namely switching branches.
+
+\subsection{\lstinline{git checkout} -- switching and creating branches} \label{checkout}
+
+Combines the functionalities of \hyperref[switch]{\lstinline{switch}} and \hyperref[restore]{\lstinline{restore}} into one swiss army knife command. (Actually, \lstinline{checkout} is the original command, and \lstinline{switch} and \lstinline{restore} were introduced to split its functionality into its two use cases and "simplify" their commands.)
+Use \lstinline{git checkout <name>} to switch to the specified, existing branch, i.e. move \hyperref[branching]{\lstinline{HEAD}} to point to the specified branch and change files in the working directory accordingly. You can only checkout when you have no uncommited changes, i.e. you have a clean working state.\\
+Use option \lstinline{-b} to additionally create the branch, avoiding a \lstinline{git branch} command. If you also specify a remote branch (i.e. \lstinline{git checkout -b <branch> <remote>/<branch>}), you create a \hyperref[remotes]{tracking branch} that tracks the specified remote branch. This can be shortened with the \lstinline{--track} option, in which case you don't need to specify the name of the tracking branch (it will get the same name as the remote branch to be tracked). This is so common that when you simply type \lstinline{git checkout <branch>} and that branch doesn't exist locally but matches a branch on exactly one remote, it will create a tracking branch tracking that branch.\\
+Use \lstinline{git checkout <commit>} with to checkout to the commit of the supplied SHA-1 hash. This will get you into a detached \hyperref[branching]{\lstinline{HEAD}} state, which is a rather unintuitive phrase that means you are not currently on (the latest commit of) any branch. If you \hyperref[checkout]{checkout} or \hyperref[switch]{switch} back to a branch again, all changes made in the detached \hyperref[branching]{\lstinline{HEAD}} state will be lost. If you want to keep the changes, you have to \hyperref[branch]{create a branch} in the detached \hyperref[branching]{\lstinline{HEAD}} state and potentially merge that.
+
+Use \lstinline{git checkout -- <file>} to undo any local changes made in the file since -- and revert back to the version at -- the last commit.\\
+Use \lstinline{git checkout [tag]} to switch to the version of the project as per the tag's commit, in a detached \hyperref[branching]{\lstinline{HEAD} state}.
+Use \lstinline{git checkout -} to have \hyperref[branching]{\lstinline{HEAD}} point to whatever it was pointing at previously (i.e. running \lstinline{git checkout -} twice will have \hyperref[branching]{\lstinline{HEAD}} point to the same branch or commit).
+
+\subsection{\lstinline{git merge} -- merging branches} \label{merge}
+
+\lstinline{git merge <name>} merges the specified branch into the current branch pointed to by \hyperref[branching]{\lstinline{HEAD}}.\\
+If the current \hyperref[branching]{\lstinline{HEAD}} commit can be reached by following the about-to-be-merged commit’s history, Git simply moves the \hyperref[branching]{\lstinline{HEAD}} pointer forward (because there is no divergent work to merge together) and indicates this with the \lstinline{Fast-forward} phrase.\\
+If this is not the case, and the respective histories have diverged, Git does a simple three-way merge between the two commits pointed to by the branch tips and their common ancestor, and creates a new special sort of commit: a \emph{merge commit}, which has two parents.\\
+If both divergent paths modified the same part of the same file, Git lists this as a conflict (also listed by \hyperref[status]{\lstinline{git status}}) and pauses the process. A conflict in a file looks like this:
+
+\begin{lstlisting}
+<<<<<<< HEAD:file.cpp
+int number = 5;
+=======
+uint number;
+>>>>>>> other_branch:file.cpp
+\end{lstlisting}
+
+This entire block should be replaced with manually resolved code. Use \hyperref[add]{git add} to stage the file after you've solved all conflicts in it, which will mark it as resolved. If everything has been resolved, use \hyperref[commit]{\lstinline{git commit}} to finalize the merge.\\
+After a merge, you'll likely want to delete the merged branch with \hyperref[branch]{\lstinline{git branch -d <name>}}. (Use \hyperref[merge]{\lstinline{git branch --merged}} to list all such branches.)
+
+\subsection{\lstinline{git mergetool} -- merging branches in a GUI} \label{mergetool}
+
+Boots an appropriate visual merge tool to walk you through the conflicts. If the \lstinline{merge.tool} \hyperref[config]{config} variable isn't configured, Git displays a list to choose from (and a default if you do not select any).
+
+\subsection{\lstinline{git rebase} -- merging branches} \label{rebase}
+
+An alternative way -- besides \hyperref[merge]{\lstinline{git merge}} -- of integrating changes of one branch into another, that takes a sequence of commits that were committed on one branch and replays/copies them on some other (base) commit of another. There is no practical difference; the end product is the same, but with rebasing you get a linear history, which can be preferred.
+
+There are two modes of rebasing:
+
+\begin{itemize}
+    \item Standard. Use \lstinline{git rebase <base_commit>} to rebase the current branch onto the specified commit (which can be any kind of commit reference, like an ID, branch or tag name, etc.), which takes the commits in your current working branch and applies them to the head of the specified commit. Technically, Git goes to the common ancestor of the two branches, gets the diff introduced by each commit of the current branch (and saves those diffs to temporary files), sets the current branch to the same commit as the branch you are rebasing onto (using \lstinline{git reset --hard <branch>}), and applies each change in turn. This means that the rebased-onto branch is behind (only the just-rebased branch points to the latest commit; the rebased-onto branch pointer hasn't moved), so you can \hyperref[checkout]{switch} to that branch and do a \hyperref[merge]{fast-forward merge} with the rebased branch to catch-up with the rebased diffs.\\
+    You don't have to \hyperref[checkout]{switch} to the to-be-rebased branch if you specify it: \lstinline{git rebase <onto_branch> <rebase_branch>}. You still need to \hyperref[merge]{fast-forward}.\\
+    Use option \lstinline{--onto} to specify a different branch to rebase onto than the branch that the current branch branched off of. Basically, \lstinline{git rebase --onto <onto_branch> <diverged_from_branch> <rebase_branch>} takes the patches of \lstinline{<rebase_branch>} since it diverged from \lstinline{<diverged_from_branch>} and applies these on the \lstinline{<rebase_branch>} as if it was based directly off the \lstinline{<onto_branch>} instead. Now you can \hyperref[merge]{fast-forward} the \lstinline{<onto_branch>} again.
+    \item Interactive. With the \lstinline{-i/--interactive} option you start an interactive rebase session, where you can edit each commit individually and rewrite history. It is very useful on a single branch as a sort-of \lstinline{git commit --amend} on steroids. Because you specify the base on which to replay the commits, you specify the commit immediately before the earliest commit you want to modify, so the last commit you want to retain as-is. Your set text editor will open with a list of the commit, oldest first. All commits are picked by default. You can change the \lstinline{pick} command to any of the command listed at the bottom. Closing the editor will start the process. Git will operate the listed command in the specified way in-order. Use \lstinline{git rebase --continue} to move forward. Use \lstinline{git rebase --abort} to abort and discard all changes.
+\end{itemize}
+
+Do \textbf{not} rebase commits that exist outside your repository and that people may have based work on, because you’re essentially abandoning existing commits and creating new ones (with new SHA-1’s) that are similar but different. Things will get messy.
+
+\section{Remotes} \label{remotes}
+
+Remotes are like nicknames for the URLs of repositories; versions (generally one, may be more) of your project that are hosted elsewhere: on the internet, network, or even on the same system/host. If your repository is a fork, you could for example add the original repository as a remote, in order to occasionally update your fork with commits to the original.\\
+Each remote has a name. \lstinline{origin} is the default name Git gives to the remote you cloned from. You can interchangeably use a remote's name and URL.\\
+\emph{Remote-tracking branches} are local branches (though they can't be moved by the user) that take the form \lstinline{<remote>/<branch>} and which reflect the corresponding branch in the remote; they're pointers to the commit at which the remote's branch was at the last time you connected to the remote.\\
+\emph{Tracking branches} are local branches that directly track a remote branch (aka an upstream branch) via a remote-tracking branch. In practice, nearly any branch you're working is likely a remote tracking branch. On such a branch you can use \hyperref[pull]{\lstinline{git pull}}/\hyperref[merge]{\lstinline{git merge}} to automatically pull/merge the remote branch into the tracking branch. \lstinline|@{upstream}|/\lstinline|@{u}| are shorthands for the upstream remote tracking branch.
+
+\subsection{\lstinline{git fetch} -- fetching from remotes} \label{fetch}
+
+\lstinline{git fetch <remote>} (only) fetches/downloads all data from the specified remote that isn't already locally available (but doesn't merge anything and doesn't change working directory) and sets/updates the corresponding \hyperref[remotes]{remote-tracking branches}. After this, you have references to all the branches from that remote which can be merged or inspected (locally). For example, this means that you may have a \lstinline{master} branch and a \lstinline{origin/master} branch that point to different commits. However, fetch new remote-tracking branches doesn't download actual working copies; you'd have to merge those remote-tracking branches first.
+
+\subsection{\lstinline{git pull} -- pulling (fetching + merging) from remotes} \label{pull}
+
+If your current \hyperref[branching]{branch} is a \hyperref[remotes]{tracking branch}, \lstinline{git pull} both fetch and then merge that remote branch into your current branch.\\
+It will warn if the \lstinline{pull.rebase} \hyperref[config]{config variable} is not set.
+
+\subsection{\lstinline{git push} -- pushing to remotes} \label{push}
+
+\lstinline{git push <remote> <branch>} pushes the specified branch upstream. Only works if you have write access to the remote and nobody has pushed in the meantime (so first \hyperref[pull]{pull}). Use \lstinline{git push <remote> <local_branch>:<remote_branch>} if you want to push your branch to a differently names remote branch.\\
+Use the \lstinline{--tags} option to push \hyperref[tag]{tags} (that are not already there); it doesn't do this by default. Both types of tags will be pushed; replace \lstinline{--tags} with \lstinline{--follow-tags} to only push annotated tags.\\
+To only push a specific \hyperref[tag]{tag}, replace \lstinline{--tags} with that \hyperref[tag]{tag}. Use the \lstinline{--delete|-d} option before the tag to delete the specified tag.\\
+With the \lstinline{--delete|-d} option you can delete remote branches from a remote: \lstinline{git push <remote> --delete <branch>}.
+
+\subsection{\lstinline{git remote} -- remote management} \label{remote}
+
+It lists the names of each remote handle you've specified, which often is only \lstinline{origin}.\\
+Adding \lstinline{--verbose|-v} additionally shows the URLs corresponding to the names.
+
+Running \lstinline{git remote add <name> <url>} explicitly adds another remote specified by the \hyperref[protocols]{URL} (with nothing fetched and no remote-tracking branches set).
+
+\lstinline{git remote rename <old> <new>} renames the specified remote and all associated remote-tracking branch names to the new name.
+
+\lstinline{git remote remove <name>} removes the specified remote and associated remote-tracking branches and configuration settings. (\lstinline{git remote rm} is synonymous.)
+
+\lstinline{git remote show <remote>} gives more information about the specified remote: its URL; a list of remote branches and whether they are \lstinline{tracked} (reference has been \hyperref[fetch]{fetched}), \lstinline{new} (not yet \hyperref[fetch]{fetched}), or \lstinline{stale} (removed from remote since \hyperref[fetch]{fetch}); what remote \hyperref[branching]{branch} is \hyperref[pull]{pulled} from to which local branch; and what remote \hyperref[branching]{branch} is \hyperref[push]{pushed} to from which local branch.
+
+\section{Serverside} 
+
+For collaboration, although you can technically push and pull to and from individuals' repositories, this is highly impractical, and you'd want to have a Git server with an intermediate remote repository. Such a remote repository is generally a \emph{bare repository}: a Git repository that has no working directory checked out, i.e. there's only a \lstinline{.git} folder on disk.
+
+\subsubsection{Protocols} \label{protocols}
+
+Git can use any of the following five transport protocols:
+
+\begin{itemize}
+    \item \textbf{Local}. The remote repository is in another directory on the same host, often used if collaborators have access to a shared filesystem such as an NFS mount (or if everyone uses the same PC). This is easy to setup and uses existing file permissions and network access, though can be difficult to reach from outside the network, and can be slower than using SSH on the same server.\\
+    
+    You reach the remote using e.g. \lstinline{/srv/path/to/project.git}. You can also use \lstinline{file:///srv/ path/to/project.git}, which is slower (because Git uses the process it normally uses to transfer data over a network instead of using hardlinks or directly copying the files) but which gives a clean copy of the repository with extraneous references or objects left out.
+    \item \textbf{Dumb HTTP(S)}. Prior to Git 1.6.6, this was the only HTTP(S) protocol, but has been superseded by the smart HTTP protocol, only used for read-only repositories or as fallback when a server doesn't respond with a HTTP smart service.
+    
+    You reach the remote using e.g. \lstinline{https://example.com/project.git}. It is very easy to set up; it only expects the bare Git repository to be served like normal files from the web server, and all you have to do is put a bare Git repository under your HTTP document root and set up a specific post-update hook.
+    
+    
+    \item \textbf{Smart HTTP(S)}. Operates very similarly to the SSH or Git protocols, but runs over standard HTTP(S) ports and can use various HTTP authentication mechanisms. This means it's often easier than something like SSH. Only a single URL is needed for reading (cloning) and writing (pushing), both with (optional) authentication with user name and password rather than generating SSH keys, which makes it easy for the end user. Like the SSH protocol, it is fast and efficient. However, it can be a little more tricky to set up compared to SSH on some servers.
+    \item \textbf{SSH}. Common when self-hosting because SSH access to servers is already set up in most places, and it's easy te setup otherwise.
+    
+    You reach the remote using e.g. \lstinline{ssh://[user@]server/project.git}, or with the shorter scp-like syntax \lstinline{[user@]server:project.git}. In both cases above, if you don’t specify the optional username, Git assumes the user you’re currently logged in as. All data is encrypted and authenticated, and transfer is efficient. However, it doesn't support anonymous access to your Git repository. If you’re using SSH, people must have SSH access to your machine, even in a read-only capacity, which doesn't make SSH conducive to open source projects for which people might simply want to clone your repository to examine it. If you’re using it only within your corporate network, SSH may be the only protocol you need to deal with. If you want to allow anonymous read-only access to your projects and also want to use SSH, you’ll have to set up SSH for you to push over but something else for others to fetch from.
+    \item \textbf{Git}. A special daemon that comes packaged with Git; it listens on a dedicated port (9418) that provides a service similar to the SSH protocol, but with absolutely no authentication. You must create a \lstinline{git-daemon-export-ok} file.
+    
+    It is often the fastest network transfer protocol available. However, there is no authentication, so you'll likely pair it with SSH or HTTPS access for the few developers who have push (write) access and have everyone else use \lstinline{git://} for read-only access. It’s also probably the most difficult protocol to set up.
+\end{itemize}
+
+\end{document}
