@@ -71,7 +71,7 @@ Kubernetes\\
 The Kubernetes Book\\
 by Nigel Poulton\\
 2025 Edition\\
-\textcolor{gray}{Up until Chapter 6: Kubernetes Deployments - Create a Deployment}
+\textcolor{gray}{Up until Chapter 7: Kubernetes Services}
 }
 \author{Summary by Emiel Bos}
 \date{}
@@ -82,7 +82,7 @@ by Nigel Poulton\\
 
 \section{Intro}
 
-The word Kubernetes originates from the Greek word for helmsman, a person who steers a ship. You can see this in the logo. You’ll often see it shortened to K8s and pronounced as "kates".
+The word Kubernetes originates from the Greek word for helmsman, a person who steers a ship. You can see this in the logo. You’ll often see it shortened to K8s and pronounced as "kates".\\
 Kubernetes was developed by a group of Google engineers partly in response to Amazon Web Services (AWS) and Docker. Google built their own cloud, but needed a way to abstract the value of AWS and make it as easy as possible for customers to get off AWS and onto their cloud. They also ran their own production apps on billions of containers per week.\footnote{Google used their proprietary Borg and Omega container orchestrators for this. Kubernetes is not an open-source version of Borg or Omega, but it shares its DNA and family history with them.} At the same time, Docker was taking the world by storm, and users needed help managing explosive container growth. In 2014, Google open-sourced Kubernetes and donated it to the then newly formed Cloud Native Computing Foundation (CNCF).
 In 2016 and 2017, Kubernetes, Docker Swarm, and Mesosphere DCOS competed to become the industry standard container orchestrator. Kubernetes won. However, Docker Swarm is still being developed and is still used by small companies needing a simple alternative to Kubernetes.
 The Kubernetes documentation uses Pascal case (aka UpperCamelCase) when referring to API objects, and the same is done here.
@@ -160,11 +160,9 @@ The \lstinline{kubectl exec} command lets you execute commands inside running co
 	\item \lstinline{exec sessions} connect your local shell to the container’s shell -- specifically your shell’s STDIN and STDOUT streams to the STDIN and STDOUT of the container in the Pod -- and is the same as being logged on to the container in an SSH session. You do this with the \lstinline{--it} flag: \lstinline{kubectl exec -it <pod> -- sh}. The \lstinline{sh} command starts a new shell process in the session, and your prompt will change to indicate you’re now inside the container.
 \end{itemize}
 
-Pod creation and deletion generate \emph{IP churn} and make Pods unreliable; clients cannot make reliable connections to individual Pods as Kubernetes doesn’t guarantee they’ll exist. Therefore, \emph{Services} come into play by providing a reliable DNS name, IP address and port for a dynamic group of Pods behind it (you can consider this the Service's front-end), and load balances requests to them using labels (the "back-end").
-
 Every Kubernetes cluster runs a Pod network and automatically connects all Pods to it. It’s usually a flat layer-2 overlay network that spans every cluster node and allows every Pod to talk directly to every other Pod, even if the remote Pod is on a different cluster node. Your Pod network is implemented by a third-party plugin that interfaces with Kubernetes via the Container Network Interface (CNI). You choose this network plugin at cluster build time, and it configures the Pod network for the entire cluster. Lots of plugins exist, and each one has its pros and cons. Cilium is the most popular at the time of writing and implements a lot of advanced features such as security and observability.
 
-\section{Multi-container Pods}
+\subsection{Multi-container Pods}
 
 The simplest configurations run a single container per Pod (which is why the terms Pod and container are sometimes used interchangeably), but you can have multi-container Pods. In this way, each container is kept simple and focussed on one task, the \emph{single responsibility principle}. The container(s) run in an \emph{execution environment}, which includes a filesystem and volumes (\lstinline{mnt} namespace), network stack (\lstinline{net} namespace), memory (\lstinline{IPC} namespace), process tree (\lstinline{pid} namespace), and hostname/IP address (\lstinline{uts} namespace). These are all shared among the containers. IP address is also shared in that case, with different containers having different ports, and they can communicate with each other with the \lstinline{localhost} interface. You should use multi-container Pods for tightly coupled components that need to share resources, but you should prefer single-container Pods and loosely couple them over the network. Kubernetes has two main patterns for multi-container Pods:
 
@@ -249,37 +247,76 @@ spec:
 
 If it’s a short-lived Pod (e.g. a batch job), it enters the \emph{succeeded} state as soon as all containers complete their tasks. If it’s a long-lived Pod (e.g. a web server), it remains \emph{running} indefinitely. You can delete Pods with \lstinline{kubectl delete -f <pod>|<yaml>}.
 
-The manual method is rarely used, because it creates a static Pod that cannot self-heal, scale, perform rolling updates, and if the node fails, the kubelet fails with it and cannot do anything to help the Pod, because they’re only managed by the kubelet on the node they’re running on, and kubelets are limited to restarting containers on the same node. You’ll usually deploy them via higher-level workload controllers that augment them with additional features. The most common of these controllers is a Deployment, which adds self-healing, scaling, rollouts, and rollbacks. An example:
+The manual method is rarely used, because it creates a static Pod that cannot self-heal, scale, perform rolling updates, and if the node fails, the kubelet fails with it and cannot do anything to help the Pod, because they’re only managed by the kubelet on the node they’re running on, and kubelets are limited to restarting containers on the same node. You’ll usually deploy them via higher-level workload controllers that augment them with additional features. The most common of these controllers is a Deployment, which adds self-healing, scaling, rollouts, and rollbacks. Posting a Deployment YAML to the cluster will create a Deployment, which in turn creates and manages a ReplicaSet (which is the API object that actually provides the advertised self-healing and scaling features), which in turn creates and manages the Pods. You perform all management via the Deployment and never directly manage the ReplicaSet or Pods, so you shouldn’t directly create or edit ReplicaSets. The ReplicaSet controller makes sure the correct number of Pod replicas are always present.
+
+Modern cloud-native microservices should be loosely coupled and communicate only via well-defined via APIs, to allow updating without impacting other microservices. They should also be backward and forward compatible, to allow updating without caring which versions of clients are consuming your service. These are requirements for \emph{rollouts} (aka releases, zero-downtime updates, or rolling updates), which Kubernetes does by repeatedly creating a new replica running the new version and terminating a replica running the old version, until all replicas are on the new version.\footnote{Kubernetes actually updated (removes and creates) \lstinline{maxSurge + maxUnavailable} Pods at a time.} What happens under the hood, when you re-post an updated Deployment YAML file with a new Pod spec (e.g. with an updated image) to the API server, the Deployment controller creates a new ReplicaSet with the same number of Pods (assuming you haven't changed that) but running the newer version and systematically increments the number of Pods in the new ReplicaSet as it decrements the number in the old ReplicaSet. (Remember, when you update a Pod, you’re actually deleting it and replacing it with a new one.) You can monitor the progress with \lstinline{kubectl rollout status}. You can pause and resume it with \lstinline{kubectl rollout pause|resume deploy <deployment>}. You can manually start a rollout with \lstinline{kubectl rollout}, but this is not recommended.\\
+The old ReplicaSet is kept for \emph{rollbacks} (to an earlier version), and this is just the opposite process of a rollout. Note that rollbacks follow the same logic and rules as an update/rollout. Actually, \lstinline{revisionHistoryLimit} ReplicaSets are kept. You can see the revision history with \lstinline{kubectl rollout history deployment <deployment>}, and the ReplicaSet associated with each revision with \lstinline{kubectl get rs}. Even though it is not recommended to manually rollback, it can be convenient if it needs to be done quickly. You do this with \lstinline{kubectl rollout undo deployment <deployment> --to-revision=1}, but remember to update your source YAML files to reflect the changes.\\
+In de Pod spec/template you specify one or more labels (in \lstinline{spec.template.metadata.labels} which are given to the Pods when they're created, and then the Deployment controller knows which Pods to update based on these labels; it will select Pods that have all the selector labels with the same values. Pods and Deployments are both immutable, meaning you cannot change the selector or labels after you create the Deployment
 
 \begin{lstlisting}
 kind: Deployment
 apiVersion: v1
 metadata:
-	name: webapp
+	name: <deployment> # Must be valid DNS name
 spec:
-    replicas: 4 # No. of Pods, used by the ReplicaSet
-    minReadySeconds: 10
-    strategy:
+    replicas: 4 # No. of Pods as defined in the spec.template, used by the ReplicaSet
+    selector: # List of labels the Deployment and ReplicaSet controllers look for when deciding which Pods they manage
+        matchLabels:
+            app: hello-world # Has to match a label in spec.template.metadata.labels
+    revisionHistoryLimit: 5 # No. of previous ReplicaSets to keep for rollback
+    progressDeadlineSeconds: 300 # No. of seconds each replica has to spin up before it's reported as failed
+    minReadySeconds: 10 # No. of seconds to wait after the previous replica has started, to throttle the rate at which replicas are replaced. Make this long enough to catch failures
+    strategy: # Rolling update settings
         type: RollingUpdate
-    template: # Pod template/definition, as exemplified above, but without kind and apiVersion
-        ...
+        rollingUpdate:
+            maxUnavailable: 1 # Never have more than this number of Pods below desired state
+            maxSurge: 1 # Never have more than this number of Pods above desired state
+    template: # Pod template/definition, without `kind` and `apiVersion`
+        metadata:
+            labels: # Pods are created with these labels, to be used for selecting Pods when performing updates, etc.
+                app: hello-world
+                version: v2 # This is an additional label that's not in the selector, but that's fine (it will still be selected)
+        spec:
+            containers:
+            -   name: hello-pod
+                image: nigelpoulton/k8sbook:1.0
+                ports:
+                - containerPort: 8080
 \end{lstlisting}
 
-Posting this Deployment YAML to the cluster will create a Deployment, which in turn creates and manages a ReplicaSet (which is the API object that actually provides the advertised self-healing and scaling features), which in turn creates and manages the Pods. You perform all management via the Deployment and never directly manage the ReplicaSet or Pods. The ReplicaSet controller makes sure the correct number of Pod replicas are always present.
+Run \lstinline{kubectl apply -f <file>.yml} to create the Deployment on your cluster, i.e. persist the Deployment configuration to the cluster store as a record of intent. You can use the normal \lstinline{kubectl get deploy} or \lstinline{rs} and \lstinline{kubectl describe deploy} or \lstinline{rs} commands to see Deployment and ReplicaSet details respectively. Because the Deployment controls the ReplicaSet’s configuration, ReplicaSet info gets displayed in the output of Deployment commands. A ReplicaSet's name matches the Deployment’s name with appended with a hash of the Pod template section of the Deployment manifest (i.e. everything below \lstinline{spec.template}). You can use this name e.g. in a \lstinline{kubectl describe rs <replicaset>} command. The ReplicaSet in turn adds this hash to Pods as the \lstinline{pod-template-hash} label, and also use this label to select their pods with.\footnote{Earlier versions of Kubernetes didn't do this, such that Deployments could seize ownership of static Pods if their labels matched the Deployment’s label selector, even though they weren't meant to.} Making changes to the Pod template section initiates a rollout and creates a new ReplicaSet with a hash of the updated Pod template.
 
-You can scale your apps manually, but Kubernetes has several \emph{autoscalers}:
+You can scale your apps manually, either imperatively using \lstinline{kubectl scale deploy <deployment> --replicas <num>}\footnote{However, the current state of your environment will no longer matches your declarative manifest, so updating and reposting your Deployment YAML will revert this change. For this reason, the declarative way of manually scaling is preferred.}, or declaratively by updating the \lstinline{replicas} field in the Deployment YAML and reposting that. Instead of manual scaling, Kubernetes has several \emph{autoscalers} that scale based on current demand:
 
 \begin{itemize}
-    \item The \emph{HorizontalPodAutoscaler} (HPA) adds and removes Pods to meet current demand. Installed on most clusters and widely used.
-    \item The \emph{VerticalPodAutoscaler} (VPA) increases and decreases the CPU and memory allocated to running Pods to meet current demand. It isn’t installed by default, has several known limitations, and is less widely used. Current implementations work by deleting the existing Pod and replacing it with a new one every time it scales the Pods resources, which is disruptive and can even result in Kubernetes scheduling the new Pod to a different node. Work is underway to enable in-place updates to live Pods, but it’s
+    \item The \emph{HorizontalPodAutoscaler} (HPA) adds and removes Pods. Installed on most clusters and widely used.
+    \item The \emph{VerticalPodAutoscaler} (VPA) increases and decreases the CPU and memory allocated to running Pods. It isn’t installed by default, has several known limitations, and is less widely used. Current implementations work by deleting the existing Pod and replacing it with a new one every time it scales the Pods resources, which is disruptive and can even result in Kubernetes scheduling the new Pod to a different node. Work is underway to enable in-place updates to live Pods, but it’s
     currently an early alpha feature.
     \item The \emph{ClusterAutoscaler} (CA) adds and removes cluster nodes so you always have enough to run all scheduled Pods. Installed on most clusters and widely used.
     \item[-] Community projects like \href{https://karmada.io/}{karmada} take things further by allowing you to scale apps across multiple clusters.
 \end{itemize}
 
-Modern cloud-native microservices should be loosely coupled and communicate only via well-defined via APIs, to allow updating without impacting other microservices. They should also be backward and forward compatible, to allow updating without caring which versions of clients are consuming your service. These are requirements for zero-downtime rolling updates (\emph{rollouts}), which Kubernetes does by creating a new replica running the new version and terminates one running the old version until all replicas are on the new version. What happens under the hood, when you re-post an updated Deployment YAML file with a new Pod spec to the API server, the Deployment controller creates a new ReplicaSet with the same number of Pods (assuming you haven't changed that) but running the newer version and systematically increments the number of Pods in the new ReplicaSet as it decrements the number in the old ReplicaSet. The old ReplicaSet is kept for \emph{rollbacks} (to an earlier version), and this is just the opposite process of a rollout. Kubernetes gives you fine-grained control over rollouts and rollbacks, e.g. through insert delays, controlling the pace and cadence of releases, and even probing the health and status of updated replicas.
+\emph{Multi-dimensional autoscaling} is jargon for combining multiple scaling methods.
 
-\emph{Multi-dimensional autoscaling} is jargon for combining multiple scaling methods 
+\section{Service}
+
+Pod creation and deletion generate \emph{IP churn} and make Pods unreliable; clients cannot make reliable connections to individual Pods as Kubernetes doesn’t guarantee they’ll exist. Therefore, \emph{Services} come into play by providing a reliable DNS name, IP address and port for a dynamic group of Pods behind it (you can consider this the Service's front-end), and load balances requests to them using labels (the "back-end").
+
+\begin{lstlisting}
+apiVersion: v1
+kind: Service
+metadata:
+    name: lb-svc
+    labels:
+        app: hello-world
+spec:
+    type: LoadBalancer
+    ports:
+    -   port: 8080
+        protocol: TCP
+    selector:
+        app: hello-world # Send traffic to Pods with this label
+\end{lstlisting}
 
 \section{Namespaces}
 
