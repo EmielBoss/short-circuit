@@ -103,49 +103,49 @@ Arrays are stored contiguously in RAM.
 
 \emph{Static arrays} have a fixed length. It never needs to be moved when it runs out of space, but it is highly inflexible. Accessing the $i$'th element is $O(1)$ (\emph{random access}), inserting and/or removing the last element is $O(1)$ (which is just overwriting it), inserting and/or removing anywhere else is $O(n)$, because you need to shift every element.
 
-Dynamic arrays double in size whenever they run out of space, with the new array allocated somewhere else. All time complexities are still the same. Even pushing $n$ elements is still only $O(n)$, even when starting with an array of length $1$, because it takes $1 + 2 + 4 + 8 + ... + \frac{n}{2} + n$ operations, which is never more than $2n$.
+\emph{Dynamic arrays} double in size whenever they run out of space, with the new array allocated somewhere else. All time complexities are still the same. Even pushing $n$ elements is still only $O(n)$, even when starting with an array of length $1$, because it takes $1 + 2 + 4 + 8 + ... + \frac{n}{2} + n$ operations, which is never more than $2n$.
 
 \subsection{Linked lists}
 
-A \emph{(singly) linked list} consists of (list) nodes, each containing a value and a pointer (address) to the next node. Linked lists do not need to be stored contiguously and never need to move. Accessing and searching is $O(n)$ due to traversal (\emph{sequential access}). Inserting/deleting is also $O(n)$ because of traversal, except at the start or end when maintaining a \lstinline{head} or \lstinline{tail} pointer. The time complexities are basically the inverse of an array: finding the point of insertion/deletion is $O(n)$ for linked lists and $O(1)$ for arrays, while performing the insertion/deletion is $O(1)$ for linked lists and $O(n)$ for arrays. In other words, arrays are better for reads, linked lists are better for writes.
+A \emph{(singly) linked list} consists of nodes, each containing a value and a pointer (address) to the next node. Linked lists do not need to be stored contiguously and never need to move. Accessing and searching is $O(n)$ due to traversal (\emph{sequential access}), except at the start or end when maintaining a \lstinline{head} or \lstinline{tail} pointer. Inserting/deleting is $O(1)$, because you only have to change some pointers. Note that the time complexities are basically the inverse of an array: finding the point of insertion/deletion is $O(n)$ for linked lists and $O(1)$ for arrays, while performing the insertion/deletion is $O(1)$ for linked lists and $O(n)$ for arrays. In other words, arrays are better for reads, linked lists are better for writes.
 
-A \emph{doubly linked list} has nodes which also point to the previous node. Deleting at the end is now also $O(1)$, because we have a pointer to the penultimate node (\lstinline{tail.prev}).
+A \emph{doubly linked list} has nodes which also point to the previous node. Deleting at the end is now also $O(1)$, because we have a pointer to the penultimate node (\lstinline{tail.prev}). Java has \lstinline{LinkedList<T>}, a doubly-linked list implementation of the \lstinline{List} and \lstinline{Deque} interfaces.
 
 \subsection{Stacks}
 
-A stack is a LIFO (last in, first out) data structure which supports pushing, popping and peeking (at the top) in constant time. Stacks can be implemented as dynamic arrays or doubly linked lists.
+A \emph{stack} is a LIFO (last in, first out) data structure which supports pushing, popping and peeking (at the top) in constant time. Stacks can be implemented as dynamic arrays or doubly linked lists.
 
 \subsection{Queue}
 
-A queue is a FIFO (first in, first out) data structure which supports enqueueing to the start and dequeueing from the end in constant time. Are best implemented as linked lists.
+A \emph{queue} is a FIFO (first in, first out) data structure which supports enqueueing to the start and dequeueing from the end in constant time. Are best implemented as linked lists.
 
-A double-ended queue is like a generalization of a stack and a queue which supports $O(1)$ pushing and popping to either end. Python has \lstinline{deque} in the \lstinline{collections} module. Java has the \lstinline{ArrayDeque} and \lstinline{LinkedList} container classes that both implement interface \lstinline{Deque}, which you can use as a stack with \lstinline{push()}/\lstinline{addFirst()} and \lstinline{pop()}/\lstinline{removeFirst()}/\lstinline{remove()} for adding/removing on top/at the front, or as a queue with \lstinline{addLast()}/\lstinline{add()} (at the end) and \lstinline{removeFirst()}/\lstinline{pop()} (at the front).
+\subsection{Deque}
+
+A \emph{double-ended queue} is like a generalization of a stack and a queue which supports $O(1)$ pushing and popping to either end. Python has \lstinline{deque} in the \lstinline{collections} module. Java has the \lstinline{ArrayDeque} and \lstinline{LinkedList} container classes that both implement interface \lstinline{Deque}, which you can use as a stack with \lstinline{push()}/\lstinline{addFirst()} and \lstinline{pop()}/\lstinline{removeFirst()}/\lstinline{remove()} for adding/removing on top/at the front, or as a queue with \lstinline{addLast()}/\lstinline{add()} (at the end) and \lstinline{removeFirst()}/\lstinline{pop()} (at the front).
 
 \subsection{Hash tables}
 
-A \emph{hash function} is a function where you put in a string or any kind of sequence of bytes, and you get back a number. The function has to be consistent (same input maps to the same output). This output number can be used to deterministically index into an array by modulo'ing it by the array size. A \emph{hash table}, \emph{(hash) map}, \emph{dictionary} (dicts in Python), or \emph{associative array} is a hash function with an array.
+A \emph{hash function} is a function where you put in a string or any kind of sequence of bytes, and you get back a number. The function has to be consistent (same input maps to the same output). This output number can be used to deterministically index into an array by modulo'ing it by the array size. A \emph{hash table}, \emph{(hash) map}, \emph{dictionary} (dicts in Python), or \emph{associative array} is a hash function with an array. Java has \lstinline{HashSet<T>}/\lstinline{HashMap<T,T>}.
 
 \emph{Collisions} happen when different keys map to the same index. Collisions are avoided with a good hash function -- i.e., one that distributes values in the array evenly -- and a low load factor. The \emph{load factor} of a hash table is the percentage of occupied slots in the array. Having a load factor greater than 1 means you have more items than slots in your array. Each time the load factor is above something like $0.7$, the array is doubled\footnote{The size of the array should actually be a prime number to further avoid collisions for math reasons, so in practice it's not quite doubling it when resizing.} and all existing key-value pairs are moved to their new hashing location (which is dependent on array size), and this is called "rehashing the array". But collisions may still occur, and they can be handled in different ways:
 
 \begin{itemize}
     \item \emph{Chaining}: instead of one key-value pair per index, store a linked list per index.
-    \item \emph{Open addressing}: if you want to store a key-value pair and an index is occupied, you just put the key-value pair at the next unoccupied index. When searching, you search until the next unoccupied index (at which point you know it's not in there, or else it would be at that spot). The downside of +1'ing is that you cluster all elements, and there are better ways, like continuously squaring and modulo'ing.
+    \item \emph{Open addressing}: if you want to store a key-value pair and an index is occupied, you just put the key-value pair at the next unoccupied index. When searching, you search (\emph{probe}) until the next unoccupied index (at which point you know it's not in there, or else it would be at that spot). The downside of +1'ing is that you cluster all elements, and there are better ways, like continuously squaring and modulo'ing.
 \end{itemize}
 
 Hash tables have $O(1)$ time complexity for inserting, removing and searching\footnote{Whereas BSTs (aka treemaps/sets) have $O(\log n)$ for all three.}\footnote{Actually, $O(1)$ is the average time complexity and $O(n)$ is the worst time complexity if you have a bad hash function, but you can basically assume that $O(1)$ is simply the worst case.}. The caveat is that you can't easily traverse it in order, which would take $O(n \log n)$. They also can't contain duplicates. Use cases are fast lookup, filtering out duplicates, and caches.
 
 \subsection{Graphs}
 
-Graphs have $V$ vertices and $E$ edges. For directed graphs, $E \leq V^2$ (vertices can point to themselves). In undirected graphs, edges don't have a direction. In directed graphs, nodes have in-neighbours (that points toward them) and out-neighbours.
+\emph{Graphs} have $V$ vertices and $E$ edges, where the edges may have a direction (represented with an arrow rather than a line). For directed graphs, $E \leq V^2$ (vertices can point to themselves). In undirected graphs, edges don't have a direction. In directed graphs, nodes have in-neighbours (that points toward them) and out-neighbours.
 
-Binary trees are highly similar to linked lists, but with different terminology and no cycles. The height of a node is the longest path going down. The depth of a node is the length of the path to the root.
-
-Graphs are most often represented as an adjacency list, which concretely is either
+Graphs are most often represented as an \emph{adjacency list}, which concretely is either
 
 \begin{itemize}
     \item a collection of node/vertex objects, each of which has a value and a list of references to other node objects.
-    \item a hash table with the node value as key and list of (out-)neighbours as values (in which each element is that neighbour's key). Each node must have a unique value for this to work, which is often the case in interviews.
-    \item A list of node pairs.
+    \item a hash table with the node value as key and a list of (out-)neighbours as values (in which each element is that neighbour's key). Each node must have a unique value for this to work.
+    \item a list of node pairs.
 \end{itemize}
 
 Time complexities are often expressed as something like $O(V + E)$, or sometimes like $O(n + m)$, where $n = V$ and $m = E$.
@@ -158,16 +158,18 @@ Graphs are less commonly represented as a matrix, a 2D array in which each \text
 
 \subsubsection{Trees}
 
-A \emph{tree} is a connected, acyclic graph. \emph{Rooted trees} have exactly one node that leads to all the other nodes: the \emph{root}, which doesn't have parents. We'll only work with rooted trees. Nodes can have children and a parent. Nodes with no children are \emph{leaf nodes}.
+A \emph{tree} is a \emph{connected} (there is path between every pair of nodes) \emph{acyclic} (there are no cycles) graph. \emph{Rooted trees} have exactly one node that leads to all the other nodes: the \emph{root}, which doesn't have parents. We'll only discuss rooted trees. Nodes can have children and a parent. Nodes with no children are \emph{leaf nodes}.
 
-A \emph{binary tree} is a special type of tree where nodes can have at most two children. The \emph{height} of a binary tree is the longest path from the root node to any leaf node. Huffman coding (the foundation for text compression algorithms) uses binary trees.
+A \emph{binary tree} is a special type of tree where nodes can have at most two children. They're highly similar to linked lists, but with different terminology and no cycles. Rather than one \lstinline{next} pointer, each node has two \lstinline{left} and \lstinline{right} pointers, and likely also a \lstinline{parent} pointer. The \emph{height} of a binary tree is the longest path from the root node to any leaf node. The \emph{depth} of a node is the length of the path to the root. Huffman coding (the foundation for text compression algorithms) uses binary trees.
 
 \paragraph{Binary search trees}
 
-In a \emph{binary search tree} (BST), everything in a node's left/right subtree is less/greater than the node's value. A balanced BST is one where each node's left and right subtree have equal height, both \lstinline{\log(n)}. Searching a balanced tree is $O(\log n)$, searching a super unbalanced tree (basically a linked list) is $O(n)$, and generally it is $O(h)$, where $h$ is the height. The main advantage of BSTs over (sorted) arrays is that adding/removing elements/nodes can also be $O(\log n)$ (whereas it is $O(n)$ for arrays). It's somewhat of a middle ground between arrays and list.\\
+In a \emph{binary search tree} (BST), everything in a node's left/right subtree is less/greater than the node's value. A balanced BST is one where each node's left and right subtree have equal height, both $\log(n)$. Searching a balanced tree is $O(\log n)$, searching a super unbalanced tree (basically a linked list) is $O(n)$, and generally it is $O(h)$, where $h$ is the height. Finding the minimum/maximimum is easy: just keep taking left/right turns, which is still $O(\log n)$. The main advantage of BSTs over (sorted) arrays is that adding/removing elements/nodes can also be $O(\log n)$ (whereas it is $O(n)$ for arrays). It's somewhat of a middle ground between arrays and linked lists.
+
 Adding nodes as leaf nodes is easier than adding nodes as root or parent nodes, but does result in unbalances trees. This way is very similar to searching; we essentially search for the value to insert until we reach a null, and then create and add the node there.\\
-Removing a node is more involved. First we need to search for it. If the node has 0 children, just remove it and set the parent pointer to null, if the node has 1 child, set the parent pointer to point to that child, bypassing the node. If the node has two children, we take the leftmost descendant (with the smallest value) from the right subtree, and replace the node with that. You can also take the rightmost descendant (with the largest value) from the left subtree. Finding the minimum/maximimum is easy: just keep taking left/right turns. Still O(log n).
-Sets and maps can be implemented with BSTs, and they're called someting like OrderedSet/OrderedMap or TreeSet/TreeMap. BST maps are called SortedDict in Python (you need package sortedcontainers), map<T,T> in C++, and TreeMap<T,T> in Java.
+Removing a node is more involved. First we need to search for it. If the node has 0 children, just remove it and set the parent pointer to null, if the node has 1 child, set the parent pointer to point to that child, bypassing the node. If the node has two children, we take the leftmost descendant (with the smallest value) from the right subtree, and replace the node with that. You can also take the rightmost descendant (with the largest value) from the left subtree.
+
+Sets and maps can be implemented with BSTs, and they're called something like \lstinline{OrderedSet}/\lstinline{OrderedMap} or \lstinline{TreeSet}/\lstinline{TreeMap}. BST maps are called \lstinline{SortedDict} in Python (you need package \lstinline{sortedcontainers}), \lstinline{map<T,T>} in C++, and \lstinline{TreeSet<T>}/\lstinline{TreeMap<T,T>} in Java. As the name implies, they're a slower implementation of sets and maps than hash tables ($\Theta(\log n)$ vs. $\Theta(1)$), but you can traverse them in order, whereas this isn't possible with hash tables.
 
 \paragraph{AVL trees}
 
@@ -207,7 +209,7 @@ Duplicate values are allowed. Under the hood, heaps use arrays. The $0$'th index
 Adding a node is done by putting it at the next proper spot, and then keep swapping it with its (current) parent while it is larger/smaller than that parent (a good term for it is "percolating" upwards). Popping the highest priority node is done by returning and removing the root node, replacing it with the last node, and then percolating that down, i.e. continually replacing it with the smallest/largest of its two children.
 
 You can heapify an existing array in $O(n)$ time by first moving the first element to last to create space for the 0'th dummy element and then looping from the back of the array to the front, percolating each element down.\footnote{You can actually start the algorithm at index $\lfloor \frac{i}{2}\rfloor$, because that's the last node in the array with at least one child.} Because $\frac{n}{2}$ nodes don't move at all, $\frac{n}{2}$ only move one down, $\frac{n}{4}$ move at most two down, etc., you get a time series that basically approximates $n$.
-Searching a priority queue for an element is $O(n)$, but that's not their use anyways.
+Searching a priority queue for an element is $O(n)$, but that's not their use anyways. Java has the (heap-based) \lstinline{PriorityQueue<T>}, which implements \lstinline{Queue}.
 
 \section{Algorithms}
 
@@ -228,7 +230,7 @@ Searching a priority queue for an element is $O(n)$, but that's not their use an
 \end{itemize}
 
 \subsection{Recursion}
-\emph{Recursion} is where a function calls itself. There’s no performance benefit; it is used when it makes the solution clearer. Every recursive function has a \emph{base case} (or else it would loop infinitely) and the \emph{recursive case}. Each of the recursive function calls takes up some memory on the \emph{call stack}. If your recursion may go too deep and the call stack runs out of space, you can rewrite your code to use a loop instead, or use \emph{tail recursion}.
+\emph{Recursion} happens when a function calls itself. There’s no performance benefit; it is used when it makes the solution clearer. Every recursive function has a \emph{base case} (or else it would loop infinitely) and the \emph{recursive case}. Each of the recursive function calls takes up some memory on the \emph{call stack}. If your recursion may go too deep and the call stack runs out of space, you can rewrite your code to use a loop instead, or use \emph{tail recursion}.
 
 One-branch recursion (for example: calculating a factorial) is at least $O(n)$ time and space complexity (because the function call takes up space). Two-branch recursion (for example: calculating Fibonacci sequence) is also at least $O(n)$ time and space complexity.
 
@@ -286,7 +288,7 @@ def binary_search(nums, target):
 
 \subsubsection{Selection sort}
 
-The simplest sorting algorithm is \emph{selection sort}, which goes through the list searching for the minimum element again and again. $O(n^2)$.
+The simplest sorting algorithm is \emph{selection sort}, which goes through the list searching for the minimum element again and again. $O(n^2)$ time complexity, $O(1)$ space complexity.
 
 \subsubsection{Insertion sort}
 
@@ -308,7 +310,7 @@ def mergeSort(array):
 
     i = j = 0
 
-    # Add until we reach either end of either left or right
+    # Add until we reach end of either left or right
     while i < len(left) and j < len(right):
         if left[i] < right[j]:
             array[i+j] = left[i]
@@ -344,12 +346,13 @@ def quicksort(nums):
         return quicksort(less) + [pivot] + quicksort(greater)
 \end{lstlisting}
 
-Worst time complexity is $O(n^2)$ with very unlucky pivots, but in practice its $O(n \log n)$. Even though quicksort is $\Theta(n \log n)$ (on average) and merge sort is $O(n \log n)$ (always), in practice, quicksort's average case is faster than mergesort's average case and quicksort hits its average case way more often than its worst case. The performance of quicksort heavily depends on the choice of pivot, but always taking a random will guarantee the $\Theta(n \log n)$ average runtime.\\
+Worst time complexity is $O(n^2)$ with very unlucky pivots, but in practice it's $O(n \log n)$. Even though quicksort is $\Theta(n \log n)$ (on average) and merge sort is $O(n \log n)$ (always), in practice, quicksort's average case is faster than mergesort's average case and quicksort hits its average case way more often than its worst case. The performance of quicksort heavily depends on the choice of pivot, but always taking a random pivot will guarantee the $\Theta(n \log n)$ average runtime.
+
 The above method of partitioning the array into halves smaller and larger than the pivot is called Lomuto partition scheme. There are many partition schemes, but this one is compact and easy to understand, though less efficient than Hoare's original scheme, e.g. when all elements are equal. With this scheme, time complexity degrades to $O(n^2)$ when the array is already in order, due to the partition being the worst possible one.
 
 You can’t sort an array in $O(n)$ time on a single CPU core, but there is a parallel version of quicksort that will sort an array in $O(n)$ time.
 
-Quickselect, also developed by Tony Hoare, is a highly similar \emph{selection algorithm}, which are algorithms for finding the $k$th smallest (or largest, by tweaking the below code slightly) element in an unordered list. The array is partitioned in two halves just like in quicksort, but because we know in which partition the desired element lies, only one side needs to be recursed. This has time complexity $\omega(n)$ on average (which is almost always the case in practice), and $O(n^2)$ worst-case complexity, but this only happens on edge cases.
+\emph{Quickselect}, also developed by Tony Hoare, is a highly similar \emph{selection algorithm}, which are algorithms for finding the $k$th smallest (or largest, by tweaking the below code slightly) element in an unordered list. The array is partitioned in two halves just like in quicksort, but because we know in which partition the desired element lies, only one side needs to be recursed. This has time complexity $\Theta(n)$ on average (which is almost always the case in practice), and $O(n^2)$ worst-case complexity, but this only happens on edge cases.
 
 \begin{lstlisting}
 def kthSmallest(nums, k):
@@ -387,7 +390,7 @@ def kthSmallest(nums, k):
 
 \subsubsection{Bucket sort}
 
-Bucket sort is $O(n)$ but is unstable and can only be used when all values of elements are from some small set. In one pass of the array, all possible values are counted in a separate array where the indices are the values, and in a second pass, the original array is overwritten using these counts. Only used in certain situations.
+Bucket sort is $O(n)$, but is unstable and can only be used when all values of elements are from some small set. In one pass of the array, all possible values are counted in a separate array where the indices are the values, and in a second pass, the original array is overwritten using these counts. Only used in certain situations.
 
 In a more general formulation, the buckets span ranges of values, and the buckets are individually sorted with some other sorting algorithm before being concatenated.
 
@@ -423,7 +426,7 @@ while(queue):
 
 \subsubsection{Depth-first search (DFS)}
 
-Ill-suited for finding a shortest path. For topological sort.
+Useful for topological sort, cycle detection, and path detection. Ill-suited for finding a shortest path.
 
 \begin{lstlisting}
 def dfs(graph, start, visited=None):
@@ -441,11 +444,15 @@ def dfs(graph, start, visited=None):
 
 For finding the shortest path from \lstinline{start} to \lstinline{end} in a weighted graph. Only works on graphs with no cycles and where all the edges are nonnegative.
 
-1. Initialize: create two hash tables: one that maps each node to the sum of its shortest paths from \lstinline{start} (initialized as $\infty$) and one that maps each node to its parent/preceding node on the shortest path. Set the path costs of \lstinline{start}'s out-neighbours (and \lstinline{start} as their parent). Create a set for processed nodes.
-2. Loop until all nodes are processed:
-    2a. Find the node with currently the shortest path from \lstinline{start}. The key idea of the algorithm is that there is no other shorter path to this node.\footnote{This is also why negative weights break the algorithm; the algorithm relies on the fact that, once you process a node, there shouldn't be a shorter path to it, but with negative weights, a shorter path can still turn up. The Bellman–Ford algorithm can deal with negative weights.}
-    2b. For all this node's out-neighbors of this node, if the route via this node is shorter, update that out-neighbours shortest path cost and set it's parent to this node. Add the node to the set of processed nodes.
-4. Calculate the final path by following the parent nodes back to \lstinline{start}.
+\begin{enumerate}
+    \item Initialize: create two hash tables: one that maps each node to the sum of its shortest paths from \lstinline{start} (initialized as $\infty$) and one that maps each node to its parent/preceding node on the shortest path. Set the path costs of \lstinline{start}'s out-neighbours (and \lstinline{start} as their parent). Create a set for processed nodes.
+    \item Loop until all nodes are processed:
+    \begin{enumerate}
+        \item Find the node with currently the shortest path from \lstinline{start}. The key idea of the algorithm is that there is no other shorter path to this node.\footnote{This is also why negative weights break the algorithm; the algorithm relies on the fact that, once you process a node, there shouldn't be a shorter path to it, but with negative weights, a shorter path can still turn up. The Bellman–Ford algorithm can deal with negative weights.}
+        \item For all this node's out-neighbors of this node, if the route via this node is shorter, update that out-neighbours shortest path cost and set it's parent to this node. Add the node to the set of processed nodes.
+    \end{enumerate}
+    \item Calculate the final path by following the parent nodes back to \lstinline{start}.
+\end{enumerate}
 
 Assuming the graph is given as a nested graph:
 
@@ -494,7 +501,7 @@ def dfs(root):
 \end{lstlisting}
 
 In preorder traversal, the operation is done before recursing into the left subtree. In postorder traversal, the operation is done after recursing into the right subtree.\\
-Recursive is almost always easiest, but can also be implemented iteratively with a stack. The different forms of iterative traversal (in order of intuitiveness):
+Recursive is almost always easiest, but can also be implemented iteratively with a stack. The different forms of iterative traversal with a stack-based implementation (in order of intuitiveness):
 
 \begin{itemize}
     \item Preorder: at each current node, do the operation, push the right child onto the stack, set the left child as the current node, and repeat. If the current node is null, pop the current node from the stack. Repeat until the stack is empty.
@@ -508,19 +515,18 @@ The least common graph representation is the adjacency matrix, a 2D array in whi
 
 \subsection{Backtracking}
 
-\emph{Backtracking algorithms} (or rather, metaheuristics) find solutions to some computational problems, notably constraint satisfaction problems, by incrementally building candidates to the solutions, and abandoning a candidate ("backtracking") as soon as they determine that the candidate cannot possibly be (part of) a valid solution. Backtracking can be applied only for problems which can have "partial candidate solutions" and an efficient test of whether it is invalid. If that's the case, backtracking is often much faster than brute-force enumeration of all complete candidates. Conceptually, the partial candidates can be represented as nodes of a search tree. Each partial candidate is the parent of the candidates that differ from it by a single extension step; the leaves of the tree are the partial candidates that cannot be extended any further. A backtracking algorithm traverses this search tree recursively, from the root down, in depth-first order.
+\emph{Backtracking algorithms} (or rather, "backtracking metaheuristics") find solutions to some computational problems, notably constraint satisfaction problems, by incrementally building candidates to the solutions, and abandoning a candidate ("backtracking") as soon as they determine that the candidate cannot possibly be (part of) a valid solution. Backtracking can be applied only for problems which can have "partial candidate solutions" and an efficient test of whether it is invalid. If that's the case, backtracking is often much faster than brute-force enumeration of all complete candidates. Conceptually, the partial candidates can be represented as nodes of a search tree. Each partial candidate is the parent of the candidates that differ from it by a single extension step; the leaves of the tree are the partial candidates that cannot be extended any further. A backtracking algorithm traverses this search tree recursively, from the root down, in depth-first order.
 
 \subsection{Dynamic programming}
 
 \emph{Dynamic programming} (DP) breaks a problem down into subproblems and solves each of those while storing the results. Can replace brute-force recursion when there is a lot of repeated work being done. It is based on the idea of \emph{memoization}: calculating the result of a subproblem and storing it (in a hash table or array) for lookup later. Two variations:
 
 \begin{itemize}
-    \item Top-down DP still uses recursion; just with caching added; it starts with the main problem and works down.
+    \item Top-down DP still uses recursion, but with caching added. It starts with the main problem and works down.
     \item Bottom-up DP is iterative and starts with base cases and then works towards the main problem. Often called "true DP", and likely has better space complexity than top-down. In 1D dynamic programming, if the answer to subproblem $i$ only depends on only a few answers to subproblems $i-1, i-2, ...$, you can save space by only memorizing those last couple of answers, rotating them in a constant-size array.
 \end{itemize}
 
-Giveaways that a problem should be solved with dynamic programming are: asking for the minimum or maximum of something, having to make decisions that may depend on previously made decisions (very typical of a problem involving subsequences), when you’re trying to optimize
-something given a constraint.
+Giveaways that a problem should be solved with dynamic programming are: asking for the minimum or maximum of something, having to make decisions that may depend on previously made decisions (very typical of a problem involving subsequences), or when you’re trying to optimize something given a constraint.
 
 Characteristics of problems that can be solved with dynamic programming:
 
@@ -530,7 +536,7 @@ Characteristics of problems that can be solved with dynamic programming:
     \item It can be broken down into discrete subproblems that don’t depend on each other
 \end{itemize}
 
-Dynamic programming only works when each subproblem is discrete; when it doesn’t depend on other subproblems.
+Dynamic programming only works when each subproblem is discrete, i.e. when it doesn’t depend on other subproblems.
 
 \subsection{Sliding window algorithms}
 
@@ -583,13 +589,13 @@ while uncovered_elements:
 
 Q: Given a set of items, each with a weight and a value, determine a subset of items that maximizes the total value while satisfying the weight constraint.
 
-A: Evaluating all subsets is $O(2^n)$. The greedy strategy of picking the most valuable thing at every step is suboptimal. 2D dynamic programming gives an optimal solution by solving the problem for smaller knapsacks and subsets of items. You row-wise fill a table of subproblems with as columns the max weights from $1$ up until the actual max weight\footnote{These can likely be integers, but if you have decimal weights, you need to have a finer column granularity, i.e. a column step size that accounts for this.}, and as rows subsets of items, with each row adding another item (the order doesn't matter, but it needs the same order as the order of the items in the weight vector). Every cell is calculated as follows:
+A: Evaluating all subsets is $O(2^n)$. The greedy strategy of picking the most valuable thing at every step is suboptimal. 2D dynamic programming gives an optimal solution by solving the problem for smaller knapsacks and subsets of items. You row-wise fill a table of subproblems with as columns the max weights from $1$ up until the actual max weight\footnote{These can likely be integers, but if you have decimal weights, you need to have a finer column granularity, i.e. a column step size that accounts for this.}, and as rows subsets of items, with each row adding another item (the order doesn't matter, but it needs to be the same order as the order of the items in the weight vector). Every cell is calculated as follows:
 
 \begin{equation*}
-    M_{i,j} = \max(M_{i-1,j}, M_{i,j-\mathbf{w}_i})
+    M_{i,j} = \max(M_{i-1,j}, \mathbf{v}_i + M_{i,j-\mathbf{w}_i})
 \end{equation*}
 
-subject to $j-\mathbf{w}_i \geq 0$, where $M_{i,j}$ is the cell at row $i$ and column $j$ in matrix $M$, and $\mathbf{w}_i$ is the weight of the $i$\textsuperscript{th} least heavy item. In other words, we either the take the previous max value (i.e. without the item under consideration), or we take the value of the item plus the max value of the remaining space (as long as that's at least $0$).
+subject to $j-\mathbf{w}_i \geq 0$, where $M_{i,j}$ is the cell at row $i$ and column $j$ in matrix $M$, and $\mathbf{w}_i$ and $\mathbf{v}_i$ are the weight and value of the $i$\textsuperscript{th} least heavy item. In other words, we either the take the previous max value (i.e. without the item under consideration), or we take the value of the item plus the max value of the remaining space (as long as that's at least $0$).
 
 \subsection{Longest Common Substring}
 
@@ -639,7 +645,7 @@ A: Same as the answer to Contains Duplicate, but instead we use a sliding window
 
 \subsection{\href{https://leetcode.com/problems/contains-duplicate-iii}{Contains Duplicate III}}
 
-Q: Same as the answer to Contains Duplicate II, but instead of equal values, we're looking for two numbers that differ at most by $t$, i.e. $||\mathbf{x}_i - \mathbf{x}_j|| \leq t$.
+Q: Same as Contains Duplicate II, but instead of equal values, we're looking for two numbers that differ at most by $t$, i.e. $||\mathbf{x}_i - \mathbf{x}_j|| \leq t$.
 
 A: Same as the answer to Contains Duplicate, but instead of a hash set, we use buckets with width $w = t + 1$. The bucket of any value $v$ can be determined with $\lfloor \frac{v}{w} \rfloor$. We return \lstinline{true} if, for any value, there already exists a value in the same bucket, or whether there exists a value in the two adjacent buckets with values close enough together. Because there can be at most one value per bucket (or else we can return \lstinline{true}), we can use a hash map for the buckets that maps bucket ID to its singular value. Of course, we remove values outside the window. Time: $O(n)$ Space: $O(\min(n,k))$
 
@@ -650,7 +656,7 @@ def containsNearbyAlmostDuplicate(nums, k, t):
     buckets = {}
     w = t + 1  # Increment by 1 to handle the range correctly
     for i in range(len(nums)):
-        bucketIndex = self.getID(nums[i], w)
+        bucketIndex = nums[i] // w # Getting the bucket ID
         if bucketIndex in buckets:
             return True # There's already a value in the same bucket
         if bucketIndex - 1 in buckets and abs(nums[i] - buckets[bucketIndex - 1]) < w:
@@ -669,7 +675,7 @@ There's also a $O(n \log n)$ answer that uses a BST as a data structure.
 
 Q: Given an integer array and an integer $k$, return the $k$ most frequent elements. You may return the answer in \underline{any order}.
 
-A: Use quickselect. Use the code in \ref{quicksort}, but tweak it to return the $k$ largest elements.
+A: Use quickselect. Use the code in Section \ref{quicksort}, but tweak it to return the $k$ largest elements.
 
 \subsection{\href{https://leetcode.com/problems/group-anagrams}{Group Anagrams}}
 
@@ -728,70 +734,36 @@ def longestConsecutive(nums):
 
 This is $O(n)$ time and space, because each element is processed a constant number of times; the inner while loop only runs for each consecutive sequence.
 
-\subsection{BFS on Matrix Graphs}
+\subsection{\href{https://leetcode.com/problems/two-sum}{Two Sum}}
 
-Q: A BFS algorithm for finding the length of the shortest path from the top left to the bottom right in a given matrix graph.
+Q: Find the (indices of) two numbers in an array that sum to zero.
 
-A:
+A: You can do this in one loop by storing numbers in a hash set (or hash map if you want to return indices) and looking whether the current number's complement is already in the set; if so, you've find a tuple. Time $O(n)$, space $O(n)$.
 
-\begin{lstlisting}
-def bfs(grid):
-    ROWS, COLS = len(grid), len(grid[0])
-    visit = set()
-    queue = deque()
-    queue.append((0, 0))
-    visit.add((0, 0))
+\subsection{\href{https://leetcode.com/problems/3sum}{3Sum}}
 
-    length = 0
-    while queue:
-        for i in range(len(queue)):
-            r, c = queue.popleft()
-            if r == ROWS - 1 and c == COLS - 1:
-                return length
+Q: Given an integer array, return all the distinct triplets (\lstinline{[nums[i], nums[j], nums[k]]}, at distinct indices) that sum to zero.
 
-            neighbors = [[0, 1], [0, -1], [1, 0], [-1, 0]]
-            for dr, dc in neighbors:
-                if (min(r + dr, c + dc) < 0 or
-                    r + dr == ROWS or c + dc == COLS or
-                    (r + dr, c + dc) in visit or grid[r + dr][c + dc] == 1):
-                    continue
-                queue.append((r + dr, c + dc))
-                visit.add((r + dr, c + dc))
-        length += 1
-\end{lstlisting}
-
- $O(r*c)$
-
-\subsection{DFS on Matrix Graphs}
-
-Q: A recursive backtracking DFS algorithm for counting the number of unique, nonlooping paths from the top left to the bottom right in a given matrix graph.
-
-A:
+A: This is the solution to Two Sum repeated for every number (though you only have to check to the right of every number as an optimization).
 
 \begin{lstlisting}
-def dfs(grid, r, c, visit):
-    ROWS, COLS = len(grid), len(grid[0])
-    if (min(r, c) < 0 or
-        r == ROWS or c == COLS or
-        (r, c) in visit or grid[r][c] == 1):
-        return 0
-    if r == ROWS - 1 and c == COLS - 1:
-        return 1
+public List<List<Integer>> threeSum(int[] nums) {
+    Set<List<Integer>> triplets = new HashSet<>();
 
-    visit.add((r, c))
+    for(int i = 0; i < nums.length; i++) {
+        Set<Integer> numset = new HashSet<>();
+        for(int j = i+1; j < nums.length; j++) {
+            if(numset.contains(-(nums[i] + nums[j]))) {
+                List<Integer> list = Arrays.asList(nums[i], nums[j], -(nums[i] + nums[j]));
+                Collections.sort(list);
+                triplets.add(list);
+            }
+            numset.add(nums[j]);
+        }
+    }
 
-    count = 0
-    count += dfs(grid, r + 1, c, visit)
-    count += dfs(grid, r - 1, c, visit)
-    count += dfs(grid, r, c + 1, visit)
-    count += dfs(grid, r, c - 1, visit)
-
-    visit.remove((r, c))
-    return count
-	
-print(dfs(grid, 0, 0, set()))
+    return new ArrayList(triplets);
+}
 \end{lstlisting}
-
-$O(4^{r*c})$
 
 \end{document}
