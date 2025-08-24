@@ -71,7 +71,7 @@ Kubernetes\\
 The Kubernetes Book\\
 by Nigel Poulton\\
 2025 Edition\\
-\textcolor{gray}{Up until Chapter 7: Kubernetes Services}
+\textcolor{gray}{Up until Chapter 8: Ingress}
 }
 \author{Summary by Emiel Bos}
 \date{}
@@ -300,23 +300,38 @@ You can scale your apps manually, either imperatively using \lstinline{kubectl s
 
 \section{Service}
 
-Pod creation and deletion generate \emph{IP churn} and make Pods unreliable; clients cannot make reliable connections to individual Pods as Kubernetes doesn’t guarantee they’ll exist. Therefore, \emph{Services} come into play by providing a reliable DNS name, IP address and port for a dynamic group of Pods behind it (you can consider this the Service's front-end), and load balances requests to them using labels (the "back-end").
+Kubernetes treats Pods as ephemeral objects and deletes them during scale-down operations, rolling updates, rollbacks, node maintenance/evictions, and failures. This constant deletion generates \emph{IP churn} and make Pods unreliable; clients cannot make reliable connections to individual Pods as Kubernetes doesn’t guarantee they’ll exist. Therefore, \emph{Services} come into play by providing a reliable DNS name, IP address and port (together forming the Service's front-end) for a dynamic group of one or more identical Pods behind it, and load balances requests to them (the Service's back-end). Services maintain a list of healthy Pods and their labels. The load balances is done using labels and selectors, exactly like how Deployments know which Pods they manage.
+
+Whenever you create a Service, Kubernetes automatically creates an associated \emph{EndpointSlice}\footnote{Older versions of Kubernetes used the functionally identical Endpoints object, but EndpointSlices perform better on large busy clusters.} to track healthy Pods with matching labels. Any new Pods matching the Service’s label selector get added to the EndpointSlice, whereas any deleted Pods get removed.
+
+There are different types of Service:
+
+\begin{enumerate}
+    \item \emph{ClusterIP} is the most basic and provides a reliable endpoint (name, IP, and port) on the internal Pod network, so they're only accessible from within the cluster. The name is automatically registered with the cluster’s internal DNS, and containers are pre-programmed to use their cluster's DNS. ClusterIP is the default if you don't specify a type.
+    \item \emph{NodePort} builds on top of ClusterIP and allow external clients to connect via a dedicated port (the \lstinline{nodePort}) on every cluster node. Kubernetes will create a ClusterIP Service with the usual internally routable IP and DNS name, and publish the \lstinline{nodePort} on every cluster node and map it to that ClusterIP, so that external clients can send traffic to any cluster node on their \lstinline{nodePort}s, and then those nodes will forward the request to the ClusterIP Service, which in turn will forward it to one of the Pods in its EndpointSlide list. There are two limitations: this uses high-numbered ports (between 30000-32767), and clients need to know the names or IPs of nodes and whether they're healthy. This is why most people use LoadBalancer Services.
+    \item \emph{LoadBalancer} builds on top of NodePort Services and privision a highly-available load balancer with a publicly resolvable DNS name and low port number on the underlying cloud platform in front of the cluster nodes for extremely simple access from the internet.
+\end{enumerate}
 
 \begin{lstlisting}
 apiVersion: v1
 kind: Service
 metadata:
-    name: lb-svc
+    name: hello-world-svc # Registed with the internal cluster DNS
     labels:
         app: hello-world
 spec:
-    type: LoadBalancer
+    type: LoadBalancer # ClusterIP by default
     ports:
-    -   port: 8080
-        protocol: TCP
+    - port: 8080 # Load balancer port. By default, this matches the port the app listens on
+      nodePort: 31755 # NodePort on each cluster node. If omitted, a random port between 30000-32767 is chosen
+      targetPort: 9000 # Application port in container
     selector:
-        app: hello-world # Send traffic to Pods with this label
+        app: hello-world # Send traffic to Pods with this label AND...
+        version: v2 # this label.
 \end{lstlisting}
+
+Applying this YAML with deploy the Service declaratively. You can also create a Service for an existing deployment imperatively with \lstinline{kubectl expose deployment <deployment> --type=<type>}, which will inspect the running Deployment and by default base the port mappings and label selector on it. You can list all Services with \lstinline{kubectl get svc -o wide} and see their \lstinline{EXTERNAL-IP}, with which internet clients can connect.\footnote{When running locally, some Docker Desktop clusters incorrectly return a 172 IP address in the \lstinline{EXTERNAL-IP} column, but it should be \lstinline{localhost}.} The \lstinline{CLUSTER-IP} column lists the Service’s internal IP, that’s only routable on the internal cluster network. The \lstinline{PORT(S)} column shows the load balancer port first (8080) and then the NodePort (31755). The \lstinline{SELECTOR} column matches the Pod labels. Kubernetes has its own system Service called \lstinline{kubernetes} that exposes the Kubernetes API to all Pods and containers on the cluster. \lstinline{kubectl delete svc <service>} deletes the Service. Kubernetes will automatically delete Endpoints and EndpointSlices when you delete their associated Service.\\
+The \lstinline{kubectl describe svc <service>} gives more details on a specific service. \lstinline{Endpoints:} is the list of healthy matching Pods from the EndpointSlice object. \textbf{Session Affinity:} by default is \lstinline{None} and shows session stickiness; whether or not client connections always go to the same Pod. There's also the \lstinline{ClientIP} affinity, for when your app stores state in Pods, but this is an anti-pattern. You can inspect EndpointSlices with \lstinline{kubectl get endpointslices}, and get details for one with \lstinline{kubectl describe endpointslice <endpointslice>}.
 
 \section{Namespaces}
 
