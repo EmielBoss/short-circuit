@@ -71,7 +71,7 @@ Kubernetes\\
 The Kubernetes Book\\
 by Nigel Poulton\\
 2025 Edition\\
-\textcolor{gray}{Up until Chapter 8: Ingress}
+\textcolor{gray}{Up until Chapter 9: Wasm on Kubernetes}
 }
 \author{Summary by Emiel Bos}
 \date{}
@@ -333,14 +333,59 @@ spec:
 Applying this YAML with deploy the Service declaratively. You can also create a Service for an existing deployment imperatively with \lstinline{kubectl expose deployment <deployment> --type=<type>}, which will inspect the running Deployment and by default base the port mappings and label selector on it. You can list all Services with \lstinline{kubectl get svc -o wide} and see their \lstinline{EXTERNAL-IP}, with which internet clients can connect.\footnote{When running locally, some Docker Desktop clusters incorrectly return a 172 IP address in the \lstinline{EXTERNAL-IP} column, but it should be \lstinline{localhost}.} The \lstinline{CLUSTER-IP} column lists the Service’s internal IP, that’s only routable on the internal cluster network. The \lstinline{PORT(S)} column shows the load balancer port first (8080) and then the NodePort (31755). The \lstinline{SELECTOR} column matches the Pod labels. Kubernetes has its own system Service called \lstinline{kubernetes} that exposes the Kubernetes API to all Pods and containers on the cluster. \lstinline{kubectl delete svc <service>} deletes the Service. Kubernetes will automatically delete Endpoints and EndpointSlices when you delete their associated Service.\\
 The \lstinline{kubectl describe svc <service>} gives more details on a specific service. \lstinline{Endpoints:} is the list of healthy matching Pods from the EndpointSlice object. \textbf{Session Affinity:} by default is \lstinline{None} and shows session stickiness; whether or not client connections always go to the same Pod. There's also the \lstinline{ClientIP} affinity, for when your app stores state in Pods, but this is an anti-pattern. You can inspect EndpointSlices with \lstinline{kubectl get endpointslices}, and get details for one with \lstinline{kubectl describe endpointslice <endpointslice>}.
 
-\section{Namespaces}
+\section{Ingress}
 
-You can divide a Kubernetes cluster into multiple \emph{virtual clusters} with \emph{namespaces}.\footnote{Not to be confused with Linux kernel namespaces, which partition operating systems into virtual operating systems called containers.} The \lstinline{kubectl api-resources} command prints the API resources/objects (Pods, services, deployments, etc.) supported on the server, and whether they are namespaced, i.e., whether you can deploy to specific namespaces with custom policies and quotas. Each namespace can have its own users, permissions, resource quotas, and policies\\
-A \emph{tenant} is a loose term that can refer to individual applications, different teams or departments, or even external customers. Namespaces are most commonly used to divide clusters for use by tenants within the same organization, such that multiple tenants can share the same cluster. Namespaces are easy to setup and manage, but only provide soft isolation and cannot prevent compromised workloads from escaping the namespace and impacting workloads in others. \footnote{This is why using namespaces to divide a cluster among external tenants isn’t as common. At the time of writing, the most common way of strongly isolating tenants is to run them on their own clusters and their own hardware.} For example, a production cluster can be divided into the finance, hr, corporate-ops, etc. namespaces.
+Note that, during the 3+ years Ingress was in alpha and beta, service meshes increased in popularity, and there’s now some overlap in functionality. As a result, if you’re planning to deploy a service mesh, you may not need Ingress.
 
-You can list namespaces with the \lstinline{kubectl get namespaces} or \lstinline{kubectl get ns} command.\footnote{You can substitute \lstinline{namespace} with \lstinline{ns} when working with kubectl. You can also add \lstinline{-n} or \lstinline{--namespace} to kubectl commands to filter results against a specific namespace. When working with a specific namespace, it can be annoying having to add the \lstinline{-n} or \lstinline{--namespace} flag on all your kubectl commands. For this reason, you can set your kubeconfig to run all future kubectl command against a specific namespace with \lstinline{kubectl config set-context --current --namespace <namespace>}. Make sure you set it to the \lstinline{default} namespace again when you're done.} Every Kubernetes cluster has a set of pre-created namespaces: \lstinline{default} is where objects are deployed if you don't specy a namespace, \lstinline{kube-system} is where control plane components such as the internal DNS service and the metrics server run, \lstinline{kube-public} is for objects that need to be readable by anyone, and \lstinline{kube-node-lease} is used for node heartbeats and managing node leases. You can inspect a namespaces on your cluster with \lstinline{kubectl describe ns <namespace>}.
+LoadBalancer Services still have a shortcoming in that they only provide a one-to-one mapping between internal Services and cloud load balancers, so that every internet-facing apps in a cluster will need its own cloud load balancers (and they cost money and their number may be capped). \emph{Ingress} fixes this by letting you expose multiple Services through a single cloud load balancer. It does this by creating a single cloud load balancer on port 80 or 443 and using host-based and path-based routing to map connections to different Services on the cluster. Ingress only supports HTTP and HTTPS.
 
-Namespaces are first-class resources in the core v1 API group, meaning they’re stable, well-understood, and have been around for a long time. You can work with them imperatively via the CLI and declaratively via YAML config files. You can create a new namespace imperatively with \lstinline{kubectl create ns <namespace>} or declaratively with:
+The Ingress API definition defines the usual two constructs: a resource to define the routing rules, and a controller to implement them. However, contrary to Deployments, ReplicaSets, Services, and most other resources that have built-in pre-configured controllers, Kubernetes doesn’t have a built-in Ingress controller, meaning you need to install one. However, some cloud platforms simplify this by allowing you to install one when you build the cluster. A popular one is the NGINX Ingress controller, which you can install with \lstinline{https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v<latest_version>/deploy/static/provider/cloud/deploy.yaml}.\footnote{This will install a bunch of Kubernetes constructs: a Namespace, ServiceAccounts, ConfigMaps, Roles, RoleBindings, etc. It will deploy a controller Pods and some short-lived Pods that initialize the environment.}
+
+Once you have an Ingress controller, you deploy Ingress resources with rules telling the controller how to route requests. Ingress operates at layer 7 of the OSI model; the application layer. This means it can inspect HTTP headers and forward traffic based on hostnames and paths. In other words, DNS name resolution can map different hostnames or paths to the same load balancer IP, where an Ingress controller watches the load balancer and routes the requests based on the hostnames in the HTTP headers to different Services.
+
+Ingress classes allow running multiple Ingress controllers on a single cluster. Ingress controllers and Ingress objects are each mapped to their own Ingress class. List them with \lstinline{kubectl get ingressclass}. (The NGINX controller installs the \lstinline{nginx} Ingress class.) Check a specific Ingress class with \lstinline{kubectl describe ingressclass <class>} (there's no shortname for \lstinline{ingressclass}).
+
+With an Ingress controller and Ingress class in place, 
+
+\begin{lstlisting}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: ingress-object
+    annotations:
+        nginx.ingress.kubernetes.io/rewrite-target: / # NGINX-specific annotation that tells the controller to make a best-effort attempt to rewrite paths to the path your app expects. Here it's "/", e.g. request to the loadbalancer for mcu.com/shield path will have the path rewritten to mcu.com/
+spec:
+    ingressClassName: nginx # This Ingress object needs to be managed by the NGINX Ingress controller 
+    rules:
+    - host: mcu.com # Host-based rule block for traffic arriving via this hostname
+      http:
+        paths:
+        - path: / # Host-based rule block for traffic arriving at the root
+          pathType: Prefix
+          backend: # Traffic is send/forwarded to this backend...
+            service: # ...which is usually a ClusterIP Service
+                name: <service> # Reference to the service
+                port: # The port this service is listening on
+                    number: 8080
+        - path: /hello # Path-based rule block for traffic arriving on this subpath
+          pathType: Prefix
+          backend:
+            service:
+                name: hello-world-svc
+                port:
+                    number: 8080
+\end{lstlisting}
+
+You list ingress objects with \lstinline{kubectl get ing}. The \lstinline{CLASS} field may show as \lstinline{<None>} if you only have one Ingress controller and didn’t configure classes. \lstinline{HOSTS} is a list of hostnames the Ingress will handle traffic for. \lstinline{ADDRESS} field is the load balancer endpoint. You get details with \lstinline{kubectl describe ing <ingress>}. \lstinline{Default backend} is where the controller sends traffic arriving on a hostname/path it doesn’t have a route for. Not all Ingress controllers implement a default backend. The \lstinline{Rules} section defines the mappings between hosts/paths and backends. You can probably view your created load balancer through your cloud console GUI if you’re on a cloud platform. You’ll have to configure your DNS (either internal or internet-based) to point host-names to the Ingress load balancer.\footnote{For running locally, you can edit \lstinline{/etc/hosts} (for Mac or Linux) or \lstinline{C:\Windows\System32\drivers\etc\hosts} (for Windows) to add DNS mappings. This file acts as a local DNS override; when you try to access a domain, the system checks the hosts file first, before querying DNS servers on the internet.}
+
+\section{Namespace}
+
+You can divide a Kubernetes cluster into multiple \emph{virtual clusters} with \emph{Namespaces}.\footnote{Not to be confused with Linux kernel namespaces, which partition operating systems into virtual operating systems called containers.} The \lstinline{kubectl api-resources} command prints the API resources/objects (Pods, services, deployments, etc.) supported on the server, and whether they are namespaced, i.e., whether you can deploy to specific Namespaces with custom policies and quotas. Each Namespace can have its own users, permissions, resource quotas, and policies\\
+A \emph{tenant} is a loose term that can refer to individual applications, different teams or departments, or even external customers. Namespaces are most commonly used to divide clusters for use by tenants within the same organization, such that multiple tenants can share the same cluster. Namespaces are easy to setup and manage, but only provide soft isolation and cannot prevent compromised workloads from escaping the Namespace and impacting workloads in others. \footnote{This is why using Namespaces to divide a cluster among external tenants isn’t as common. At the time of writing, the most common way of strongly isolating tenants is to run them on their own clusters and their own hardware.} For example, a production cluster can be divided into the \lstinline{finance}, \lstinline{hr}, \lstinline{corporate-ops}, etc. Namespaces.
+
+You can list Namespaces with the \lstinline{kubectl get namespaces} or \lstinline{kubectl get ns} command.\footnote{You can substitute \lstinline{namespace} with \lstinline{ns} when working with kubectl. You can also add \lstinline{-n} or \lstinline{--namespace} to kubectl commands to filter results against a specific Namespace. When working with a specific Namespace, it can be annoying having to add the \lstinline{-n} or \lstinline{--namespace} flag on all your kubectl commands. For this reason, you can set your kubeconfig to run all future kubectl command against a specific Namespace with \lstinline{kubectl config set-context --current --namespace <namespace>}. Make sure you set it to the \lstinline{default} Namespace again when you're done.} Every Kubernetes cluster has a set of pre-created Namespaces: \lstinline{default} is where objects are deployed if you don't specify a Namespace, \lstinline{kube-system} is where control plane components such as the internal DNS service and the metrics server run, \lstinline{kube-public} is for objects that need to be readable by anyone, and \lstinline{kube-node-lease} is used for node heartbeats and managing node leases. You can inspect a Namespaces on your cluster with \lstinline{kubectl describe ns <namespace>}.
+
+Namespaces are first-class resources in the core v1 API group, meaning they’re stable, well-understood, and have been around for a long time. You can work with them imperatively via the CLI and declaratively via YAML config files. You can create a new Namespace imperatively with \lstinline{kubectl create ns <namespace>} or declaratively with:
 
 \begin{lstlisting}
 kind: Namespace
@@ -351,8 +396,8 @@ metadata:
         env: <some_variable>
 \end{lstlisting}
 
-and running \lstinline{kubectl apply -f <file>.yml}. You delete a namespace with \lstinline{kubectl delete ns <namespace>}.\\
-You can refer to namespaces imperatively with the aforementioned \lstinline{-n} or \lstinline{--namespace} flags, or declaratively:
+and running \lstinline{kubectl apply -f <file>.yml}. You delete a Namespace with \lstinline{kubectl delete ns <namespace>}.\\
+You can refer to Namespaces imperatively with the aforementioned \lstinline{-n} or \lstinline{--namespace} flags, or declaratively:
 
 \begin{lstlisting}
 apiVersion: v1
