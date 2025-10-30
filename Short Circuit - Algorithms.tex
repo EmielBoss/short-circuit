@@ -1,23 +1,20 @@
-\documentclass[8pt, table, xcdraw]{article}%
+\documentclass[table, xcdraw]{article}%
 \usepackage[a4paper, top=1cm, bottom=4cm, left=2cm, right=2cm]{geometry}%
 \usepackage{amsfonts}
 \usepackage{fancyhdr}
 \usepackage{comment}
 \usepackage{times}
 \usepackage{xcolor}
-\usepackage{tikz}
 \usepackage{float}
 \usepackage{amsmath}
 \usepackage{changepage}
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{parskip}
-\usepackage{listings}
 \usepackage{lscape}
 \usepackage{enumerate}
 \usepackage{enumitem}
 \usepackage{siunitx}
-\usepackage{hyperref}
 \usepackage[bottom]{footmisc}
 \usepackage[T1]{fontenc}
 \usepackage[export]{adjustbox}
@@ -29,27 +26,13 @@
 \useunder{\uline}{\ul}{}
 \usepackage[utf8]{inputenc}
 \usepackage{bigfoot}
+\usepackage{minted}
+\usepackage{hyperref}
 
-\lstset{
- %frame=tb, % for the lines above and under the code snippets
- language=Python,
- aboveskip=3mm,
- belowskip=3mm,
- showstringspaces=false,
- columns=flexible,
- basicstyle={\footnotesize\ttfamily},
- numbers=none,
- numberstyle=\tiny\color{gray},
- keywordstyle=\color{blue},
- commentstyle=\color{gray},
- stringstyle=\color{purple},
- breaklines=true,
- breakatwhitespace=true,
- literate={_}{\textunderscore}1 {([a-z])([A-Z])}{{\1}\allowbreak{\2}}{1},
- tabsize=3,
- escapeinside={/*!}{!*/},
- escapebegin=\color{black}
-}
+\setminted{breaklines, breakbefore=/, breakafter=>/_])\,, breakaftersymbolpre={}, fontsize=\footnotesize}
+\setmintedinline{breaklines, breakbefore=/, breakafter=>_]\,, breakaftersymbolpre={}, breakbeforesymbolpre={}, fontsize=\footnotesize}
+
+\interfootnotelinepenalty=10000
 
 \title{
 \textit{Short Circuit}\\
@@ -107,9 +90,9 @@ Arrays are stored contiguously in RAM.
 
 \subsection{Linked lists}
 
-A \emph{(singly) linked list} consists of nodes, each containing a value and a pointer (address) to the next node. Linked lists do not need to be stored contiguously and never need to move. Accessing and searching is $O(n)$ due to traversal (\emph{sequential access}), except at the start or end when maintaining a \lstinline{head} or \lstinline{tail} pointer. Inserting/deleting is $O(1)$, because you only have to change some pointers. Note that the time complexities are basically the inverse of an array: finding the point of insertion/deletion is $O(n)$ for linked lists and $O(1)$ for arrays, while performing the insertion/deletion is $O(1)$ for linked lists and $O(n)$ for arrays. In other words, arrays are better for reads, linked lists are better for writes.
+A \emph{(singly) linked list} consists of nodes, each containing a value and a pointer (address) to the next node. Linked lists do not need to be stored contiguously and never need to move. Accessing and searching is $O(n)$ due to traversal (\emph{sequential access}), except at the start or end when maintaining a \mintinline{java}{head} or \mintinline{java}{tail} pointer. Inserting/deleting is $O(1)$, because you only have to change some pointers. Note that the time complexities are basically the inverse of an array: finding the point of insertion/deletion is $O(n)$ for linked lists and $O(1)$ for arrays, while performing the insertion/deletion is $O(1)$ for linked lists and $O(n)$ for arrays. In other words, arrays are better for reads, linked lists are better for writes.
 
-A \emph{doubly linked list} has nodes which also point to the previous node. Deleting at the end is now also $O(1)$, because we have a pointer to the penultimate node (\lstinline{tail.prev}). Java has \lstinline{LinkedList<T>}, a doubly-linked list implementation of the \lstinline{List} and \lstinline{Deque} interfaces.
+A \emph{doubly linked list} has nodes which also point to the previous node. Deleting at the end is now also $O(1)$, because we have a pointer to the penultimate node (\mintinline{java}{tail.prev}). Java has \mintinline{java}{LinkedList<T>}, a doubly-linked list implementation of the \mintinline{java}{List} and \mintinline{java}{Deque} interfaces.
 
 \subsection{Stacks}
 
@@ -121,11 +104,11 @@ A \emph{queue} is a FIFO (first in, first out) data structure which supports enq
 
 \subsection{Deque}
 
-A \emph{double-ended queue} is like a generalization of a stack and a queue which supports $O(1)$ pushing and popping to either end. Python has \lstinline{deque} in the \lstinline{collections} module. Java has the \lstinline{ArrayDeque} and \lstinline{LinkedList} container classes that both implement interface \lstinline{Deque}, which you can use as a stack with \lstinline{push()}/\lstinline{addFirst()} and \lstinline{pop()}/\lstinline{removeFirst()}/\lstinline{remove()} for adding/removing on top/at the front, or as a queue with \lstinline{addLast()}/\lstinline{add()} (at the end) and \lstinline{removeFirst()}/\lstinline{pop()} (at the front).
+A \emph{double-ended queue} is like a generalization of a stack and a queue which supports $O(1)$ pushing and popping to either end. Python has \mintinline{python}{deque} in the \mintinline{java}{collections} module. Java has the \mintinline{java}{ArrayDeque} and \mintinline{java}{LinkedList} container classes that both implement interface \mintinline{java}{Deque}, which you can use as a stack with \mintinline{java}{push()}/\mintinline{java}{addFirst()} and \mintinline{java}{pop()}/\mintinline{java}{removeFirst()}/\mintinline{java}{remove()} for adding/removing on top/at the front, or as a queue with \mintinline{java}{addLast()}/\mintinline{java}{add()} (at the end) and \mintinline{java}{removeFirst()}/\mintinline{java}{pop()} (at the front).
 
 \subsection{Hash tables}
 
-A \emph{hash function} is a function where you put in a string or any kind of sequence of bytes, and you get back a number. The function has to be consistent (same input maps to the same output). This output number can be used to deterministically index into an array by modulo'ing it by the array size. A \emph{hash table}, \emph{(hash) map}, \emph{dictionary} (dicts in Python), or \emph{associative array} is a hash function with an array. Java has \lstinline{HashSet<T>}/\lstinline{HashMap<T,T>}.
+A \emph{hash function} is a function where you put in a string or any kind of sequence of bytes, and you get back a number. The function has to be consistent (same input maps to the same output). This output number can be used to deterministically index into an array by modulo'ing it by the array size. A \emph{hash table}, \emph{(hash) map}, \emph{dictionary} (dicts in Python), or \emph{associative array} is a hash function with an array. Java has \mintinline{java}{HashSet<T>}/\mintinline{java}{HashMap<T,T>}.
 
 \emph{Collisions} happen when different keys map to the same index. Collisions are avoided with a good hash function -- i.e., one that distributes values in the array evenly -- and a low load factor. The \emph{load factor} of a hash table is the percentage of occupied slots in the array. Having a load factor greater than 1 means you have more items than slots in your array. Each time the load factor is above something like $0.7$, the array is doubled\footnote{The size of the array should actually be a prime number to further avoid collisions for math reasons, so in practice it's not quite doubling it when resizing.} and all existing key-value pairs are moved to their new hashing location (which is dependent on array size), and this is called "rehashing the array". But collisions may still occur, and they can be handled in different ways:
 
@@ -160,7 +143,7 @@ Graphs are less commonly represented as a matrix, a 2D array in which each \text
 
 A \emph{tree} is a \emph{connected} (there is path between every pair of nodes) \emph{acyclic} (there are no cycles) graph. \emph{Rooted trees} have exactly one node that leads to all the other nodes: the \emph{root}, which doesn't have parents. We'll only discuss rooted trees. Nodes can have children and a parent. Nodes with no children are \emph{leaf nodes}.
 
-A \emph{binary tree} is a special type of tree where nodes can have at most two children. They're highly similar to linked lists, but with different terminology and no cycles. Rather than one \lstinline{next} pointer, each node has two \lstinline{left} and \lstinline{right} pointers, and likely also a \lstinline{parent} pointer. The \emph{height} of a binary tree is the longest path from the root node to any leaf node. The \emph{depth} of a node is the length of the path to the root. Huffman coding (the foundation for text compression algorithms) uses binary trees.
+A \emph{binary tree} is a special type of tree where nodes can have at most two children. They're highly similar to linked lists, but with different terminology and no cycles. Rather than one \mintinline{java}{next} pointer, each node has two \mintinline{java}{left} and \mintinline{java}{right} pointers, and likely also a \mintinline{java}{parent} pointer. The \emph{height} of a binary tree is the longest path from the root node to any leaf node. The \emph{depth} of a node is the length of the path to the root. Huffman coding (the foundation for text compression algorithms) uses binary trees.
 
 \paragraph{Binary search trees}
 
@@ -169,7 +152,7 @@ In a \emph{binary search tree} (BST), everything in a node's left/right subtree 
 Adding nodes as leaf nodes is easier than adding nodes as root or parent nodes, but does result in unbalances trees. This way is very similar to searching; we essentially search for the value to insert until we reach a null, and then create and add the node there.\\
 Removing a node is more involved. First we need to search for it. If the node has 0 children, just remove it and set the parent pointer to null, if the node has 1 child, set the parent pointer to point to that child, bypassing the node. If the node has two children, we take the leftmost descendant (with the smallest value) from the right subtree, and replace the node with that. You can also take the rightmost descendant (with the largest value) from the left subtree.
 
-Sets and maps can be implemented with BSTs, and they're called something like \lstinline{OrderedSet}/\lstinline{OrderedMap} or \lstinline{TreeSet}/\lstinline{TreeMap}. BST maps are called \lstinline{SortedDict} in Python (you need package \lstinline{sortedcontainers}), \lstinline{map<T,T>} in C++, and \lstinline{TreeSet<T>}/\lstinline{TreeMap<T,T>} in Java. As the name implies, they're a slower implementation of sets and maps than hash tables ($\Theta(\log n)$ vs. $\Theta(1)$), but you can traverse them in order, whereas this isn't possible with hash tables.
+Sets and maps can be implemented with BSTs, and they're called something like \mintinline{java}{OrderedSet}/\mintinline{java}{OrderedMap} or \mintinline{java}{TreeSet}/\mintinline{java}{TreeMap}. BST maps are called \mintinline{python}{SortedDict} in Python (you need package \mintinline{python}{sortedcontainers}), \mintinline{cpp}{map<T,T>} in C++, and \mintinline{java}{TreeSet<T>}/\mintinline{java}{TreeMap<T,T>} in Java. As the name implies, they're a slower implementation of sets and maps than hash tables ($\Theta(\log n)$ vs. $\Theta(1)$), but you can traverse them in order, whereas this isn't possible with hash tables.
 
 \paragraph{AVL trees}
 
@@ -193,11 +176,11 @@ A \emph{forest} is a disjoint union (basically a collection) of trees.
 
 \paragraph{Union-find}
 
-A \emph{union-find}, also known as a disjoint-set or merge-find, stores a collection of disjoint (non-overlapping) sets -- a partitioning of a set into disjoint subsets. They're often implemented as a forest of trees data structure that can be used on undirected graphs with disjoint connected components for counting the number of connected components and for cycle detection. The trees aren't meant to accurately represent the graph. Given the number of nodes and a list of unique, undirected edges (so \lstinline{[1,2]} and \lstinline{[2,1]} won't both appear), we assume each node is disjoint initially. We keep track of a parent pointer for each node (stored in a hash map, mapping node value to parent node), and the rank (height) of each tree (also stored in a hash map, with the root IDs as keys), which we want as small as possible for best performance. Iterating through the list of edges, for each edge (i.e. pair of nodes), we find the roots of the trees of both nodes by following the nodes' parent pointers. If the roots are the same, the nodes are already in the same tree, and since edges in the list are unique, there is a cycle. Else, we parent the root of the smallest tree (\lstinline{ranks[root]}) to the root of the largest tree. If both trees have the same rank, choose one of two parentings and increase the relevant rank. While finding the roots, we can do path compression, i.e. we keep track of all nodes in the path, and then parent those all to the root after we found it.
+A \emph{union-find}, also known as a disjoint-set or merge-find, stores a collection of disjoint (non-overlapping) sets -- a partitioning of a set into disjoint subsets. They're often implemented as a forest of trees data structure that can be used on undirected graphs with disjoint connected components for counting the number of connected components and for cycle detection. The trees aren't meant to accurately represent the graph. Given the number of nodes and a list of unique, undirected edges (so \mintinline{java}{[1,2]} and \mintinline{java}{[2,1]} won't both appear), we assume each node is disjoint initially. We keep track of a parent pointer for each node (stored in a hash map, mapping node value to parent node), and the rank (height) of each tree (also stored in a hash map, with the root IDs as keys), which we want as small as possible for best performance. Iterating through the list of edges, for each edge (i.e. pair of nodes), we find the roots of the trees of both nodes by following the nodes' parent pointers. If the roots are the same, the nodes are already in the same tree, and since edges in the list are unique, there is a cycle. Else, we parent the root of the smallest tree (\mintinline{java}{ranks[root]}) to the root of the largest tree. If both trees have the same rank, choose one of two parentings and increase the relevant rank. While finding the roots, we can do path compression, i.e. we keep track of all nodes in the path, and then parent those all to the root after we found it.
 
 \subsection{Priority queues}
 
-Priority queues are like queues, except the order of popping is done on the minimum/maximum value. Lookup of this value is $O(1)$ (compared to $O(\log n)$ for BSTs), because that element is always the root. Popping it and replacing it with the next value is $O(\log n)$ time. They're often implemented with heaps, but implementations with other data structures are possible. \emph{Heaps} are binary trees with two properties:
+Priority queues are like queues, except the order of popping is done on the minimum/maximum value. Lookup of this value is $O(1)$ (compared to $O(\log n)$ for BSTs), because that element is always the root. Popping it and replacing it with the next value is $O(\log n)$ time. Adding a value is $O(\log n)$. They're often implemented with heaps, but implementations with other data structures are possible. \emph{Heaps} are binary trees with two properties:
 
 \begin{itemize}
     \item The \emph{structure property} dictates that it is a complete binary tree, meaning only the lowest level may have holes, and those holes should be on the right (so nodes are added in breadth-first order).
@@ -209,7 +192,7 @@ Duplicate values are allowed. Under the hood, heaps use arrays. The $0$'th index
 Adding a node is done by putting it at the next proper spot, and then keep swapping it with its (current) parent while it is larger/smaller than that parent (a good term for it is "percolating" upwards). Popping the highest priority node is done by returning and removing the root node, replacing it with the last node, and then percolating that down, i.e. continually replacing it with the smallest/largest of its two children.
 
 You can heapify an existing array in $O(n)$ time by first moving the first element to last to create space for the 0'th dummy element and then looping from the back of the array to the front, percolating each element down.\footnote{You can actually start the algorithm at index $\lfloor \frac{i}{2}\rfloor$, because that's the last node in the array with at least one child.} Because $\frac{n}{2}$ nodes don't move at all, $\frac{n}{2}$ only move one down, $\frac{n}{4}$ move at most two down, etc., you get a time series that basically approximates $n$.
-Searching a priority queue for an element is $O(n)$, but that's not their use anyways. Java has the (heap-based) \lstinline{PriorityQueue<T>}, which implements \lstinline{Queue}.
+Searching a priority queue for an element is $O(n)$, but that's not their use anyways. Java has the (heap-based) \mintinline{java}{PriorityQueue<T>}, which implements \mintinline{java}{Queue} and supports \mintinline{java}{add(E e)}, \mintinline{java}{peek()} and \mintinline{java}{poll()} (which pops the head).
 
 \section{Algorithms}
 
@@ -236,11 +219,11 @@ One-branch recursion (for example: calculating a factorial) is at least $O(n)$ t
 
 \emph{Divide-and-conquer} algorithms are two-branch recursive algorithms that divides or splits up a problem in smaller problems, each is solved recursively, until a base case is hit.
 
-\subsection{Binary search}
+\subsection{Binary search} \label{binary_search}
 
 Binary search of an element in a sorted array is a divide-and-conquer algorithm with $O(\log n)$ time complexity and $O(1)$ space complexity.
 
-\begin{lstlisting}
+\begin{minted}{python}
 def binary_search(nums, target):
     if len(nums) == 0:
     	return -1
@@ -256,7 +239,9 @@ def binary_search(nums, target):
     		return mid
     
     return -1
-\end{lstlisting}
+\end{minted}
+
+Problems that require minimizing the maximum or maximizing the minimum often suggest a binary search approach on the range of possible values for this maximum or minimum, respectively.
 
 \subsection{Sorting algorithms}
 
@@ -292,13 +277,13 @@ The simplest sorting algorithm is \emph{selection sort}, which goes through the 
 
 \subsubsection{Insertion sort}
 
-\emph{Insertion sort} is stable and $O(n^2)$. Outer loop loops with \lstinline{i} through the array from front + 1 to back. Everything to the left of \lstinline{i} is sorted. Inner loop brings the element at \lstinline{i} from \lstinline{i} backwards to its place by swapping as long as it's out of order.
+\emph{Insertion sort} is stable and $O(n^2)$. Outer loop loops with \mintinline{java}{i} through the array from front + 1 to back. Everything to the left of \mintinline{java}{i} is sorted. Inner loop brings the element at \mintinline{java}{i} from \mintinline{java}{i} backwards to its place by swapping as long as it's out of order.
 
 \subsubsection{Mergesort}
 
 \emph{Mergesort} is divide-and-conquer (two-branch recursion); it splits the array into two newly allocated arrays, recursively sorts each half and then merges those sorted subarrays into the original array. Time complexity is $O(n \log n)$: there are $\log n$ levels/splits that each require $n$ operations. It's stable if you take care to prioritize the first half when merging.
 
-\begin{lstlisting}
+\begin{minted}{python}
 def mergeSort(array):
     if len(array) < 2:
         return
@@ -327,7 +312,7 @@ def mergeSort(array):
     while j < len(right):
         array[i+j] = right[j]
         j += 1
-\end{lstlisting}
+\end{minted}
 
 Mergesort can theoretically be done in-place (avoiding extra array allocation), but implementing the merge step is messy and complex, and it's usually slower than the standard version because of all the extra element shifting and careful indexing.
 
@@ -335,7 +320,7 @@ Mergesort can theoretically be done in-place (avoiding extra array allocation), 
 
 Quicksort, developed by Tony Hoare, is similar to mergesort. It is also divide-and conquer, but no additional arrays are needed; everything happens in-place. Also, quicksort first partitions the array and then make two recursive calls, whereas mergesort first makes recursive calls for the two halves and then merges them. At each level, the rightmost element is selected as pivot, and the rest of the array is looped front-to-back, and if an element is smaller than the pivot, it is swapped with the element at a separate "swapper" pointer that also starts at the beginning and is incremented with every swap. Lastly, the pivot itself is swapped with the element at the swapper pointer, and it then separates the array in two halves, each of which is unsorted but all elements on the left side are smaller than all elements on the right side, and each side is recursed (without the pivot).
 
-\begin{lstlisting}
+\begin{minted}{python}
 def quicksort(nums):
     if len(nums) < 2:
         return nums
@@ -344,7 +329,7 @@ def quicksort(nums):
         less = [i for i in nums[1:] if i <= pivot]
         greater = [i for i in nums[1:] if i > pivot]
         return quicksort(less) + [pivot] + quicksort(greater)
-\end{lstlisting}
+\end{minted}
 
 Worst time complexity is $O(n^2)$ with very unlucky pivots, but in practice it's $O(n \log n)$. Even though quicksort is $\Theta(n \log n)$ (on average) and merge sort is $O(n \log n)$ (always), in practice, quicksort's average case is faster than mergesort's average case and quicksort hits its average case way more often than its worst case. The performance of quicksort heavily depends on the choice of pivot, but always taking a random pivot will guarantee the $\Theta(n \log n)$ average runtime.
 
@@ -354,7 +339,7 @@ You can’t sort an array in $O(n)$ time on a single CPU core, but there is a pa
 
 \emph{Quickselect}, also developed by Tony Hoare, is a highly similar \emph{selection algorithm}, which are algorithms for finding the $k$th smallest (or largest, by tweaking the below code slightly) element in an unordered list. The array is partitioned in two halves just like in quicksort, but because we know in which partition the desired element lies, only one side needs to be recursed. This has time complexity $\Theta(n)$ on average (which is almost always the case in practice), and $O(n^2)$ worst-case complexity, but this only happens on edge cases.
 
-\begin{lstlisting}
+\begin{minted}{python}
 def kthSmallest(nums, k):
     def partition(left, right, pivot):
         nums[pivot], nums[right] = nums[right], nums[pivot]
@@ -386,7 +371,7 @@ def kthSmallest(nums, k):
     n = len(nums)
     quickselect(0, n - 1, k)
     return nums[k]
-\end{lstlisting}
+\end{minted}
 
 \subsubsection{Bucket sort}
 
@@ -400,7 +385,7 @@ In a more general formulation, the buckets span ranges of values, and the bucket
 
 Either for determining whether a path exists between two nodes, or for finding the path along the least number of edges. BFS radiates out from the starting point and is $O(V+E)$.
 
-\begin{lstlisting}
+\begin{minted}{python}
 def bfs(searched_item):
     queue = deque()
     queue += graph[searched_item]
@@ -414,21 +399,21 @@ def bfs(searched_item):
                     queue += graph[current_item]
                     searched.add(current_item)
     return False
-\end{lstlisting}
+\end{minted}
 
 Breadth-first search cannot be done recursively, needs to be done iteratively with a queue. For a strict per-level BFS:
 
-\begin{lstlisting}
+\begin{minted}{python}
 while(queue):
 	for i in range(len(queue)):
 		<process and add new stuff to queue>
-\end{lstlisting}
+\end{minted}
 
 \subsubsection{Depth-first search (DFS)}
 
 Useful for topological sort, cycle detection, and path detection. Ill-suited for finding a shortest path.
 
-\begin{lstlisting}
+\begin{minted}{python}
 def dfs(graph, start, visited=None):
     if visited is None:
         visited = set()
@@ -438,25 +423,25 @@ def dfs(graph, start, visited=None):
     for neighbor in graph.get(start, []):
         dfs(graph, neighbor, visited)
     return visited
-\end{lstlisting}
+\end{minted}
 
 \subsubsection{Dijkstra's Algorithm}
 
-For finding the shortest path from \lstinline{start} to \lstinline{end} in a weighted graph. Only works on graphs with no cycles and where all the edges are nonnegative.
+For finding the shortest path from \mintinline{java}{start} to \mintinline{java}{end} in a weighted graph. Only works on graphs with no cycles and where all the edges are nonnegative.
 
 \begin{enumerate}
-    \item Initialize: create two hash tables: one that maps each node to the sum of its shortest paths from \lstinline{start} (initialized as $\infty$) and one that maps each node to its parent/preceding node on the shortest path. Set the path costs of \lstinline{start}'s out-neighbours (and \lstinline{start} as their parent). Create a set for processed nodes.
+    \item Initialize: create two hash tables: one that maps each node to the sum of its shortest paths from \mintinline{java}{start} (initialized as $\infty$) and one that maps each node to its parent/preceding node on the shortest path. Set the path costs of \mintinline{java}{start}'s out-neighbours (and \mintinline{java}{start} as their parent). Create a set for processed nodes.
     \item Loop until all nodes are processed:
     \begin{enumerate}
-        \item Find the node with currently the shortest path from \lstinline{start}. The key idea of the algorithm is that there is no other shorter path to this node.\footnote{This is also why negative weights break the algorithm; the algorithm relies on the fact that, once you process a node, there shouldn't be a shorter path to it, but with negative weights, a shorter path can still turn up. The Bellman–Ford algorithm can deal with negative weights.}
+        \item Find the node with currently the shortest path from \mintinline{java}{start}. The key idea of the algorithm is that there is no other shorter path to this node.\footnote{This is also why negative weights break the algorithm; the algorithm relies on the fact that, once you process a node, there shouldn't be a shorter path to it, but with negative weights, a shorter path can still turn up. The Bellman–Ford algorithm can deal with negative weights.}
         \item For all this node's out-neighbors of this node, if the route via this node is shorter, update that out-neighbours shortest path cost and set it's parent to this node. Add the node to the set of processed nodes.
     \end{enumerate}
-    \item Calculate the final path by following the parent nodes back to \lstinline{start}.
+    \item Calculate the final path by following the parent nodes back to \mintinline{java}{start}.
 \end{enumerate}
 
 Assuming the graph is given as a nested graph:
 
-\begin{lstlisting}
+\begin{minted}{python}
 costs = {}
 parents = {}
 # ...initialize costs and parents here
@@ -483,7 +468,7 @@ def find_lowest_cost_node(costs):
             lowest_cost = cost . . . sets it as the new
             lowest-cost nodelowest_cost_node = node
     return lowest_cost_node
-\end{lstlisting}
+\end{minted}
 
 \subsubsection{Trees}
 
@@ -491,14 +476,14 @@ def find_lowest_cost_node(costs):
 
 Depth-first search on BST:
 
-\begin{lstlisting}
+\begin{minted}{python}
 def dfs(root):
     if not root:
         return    
     dfs(root.left)
     print(root.val) # Inorder traversal
     dfs(root.right)
-\end{lstlisting}
+\end{minted}
 
 In preorder traversal, the operation is done before recursing into the left subtree. In postorder traversal, the operation is done after recursing into the right subtree.\\
 Recursive is almost always easiest, but can also be implemented iteratively with a stack. The different forms of iterative traversal with a stack-based implementation (in order of intuitiveness):
@@ -517,7 +502,7 @@ The least common graph representation is the adjacency matrix, a 2D array in whi
 
 \emph{Backtracking algorithms} (or rather, "backtracking metaheuristics") find solutions to some computational problems, notably constraint satisfaction problems, by incrementally building candidates to the solutions, and abandoning a candidate ("backtracking") as soon as they determine that the candidate cannot possibly be (part of) a valid solution. Backtracking can be applied only for problems which can have "partial candidate solutions" and an efficient test of whether it is invalid. If that's the case, backtracking is often much faster than brute-force enumeration of all complete candidates. Conceptually, the partial candidates can be represented as nodes of a search tree. Each partial candidate is the parent of the candidates that differ from it by a single extension step; the leaves of the tree are the partial candidates that cannot be extended any further. A backtracking algorithm traverses this search tree recursively, from the root down, in depth-first order.
 
-\subsection{Dynamic programming}
+\subsection{Dynamic programming} \label{dynamic_programming}
 
 \emph{Dynamic programming} (DP) breaks a problem down into subproblems and solves each of those while storing the results. Can replace brute-force recursion when there is a lot of repeated work being done. It is based on the idea of \emph{memoization}: calculating the result of a subproblem and storing it (in a hash table or array) for lookup later. Two variations:
 
@@ -556,7 +541,7 @@ a polynomial time solution for every problem in NP. A problem is NP-complete if 
 
 \subsubsection{Satisfiability problem}
 
-The \emph{(boolean) satisfiability problem}, often abbreviated as SAT or B-SAT, is an NP-complete problem that asks whether there exists an assignment of a given propositional logic formula's boolean variables (i.e. consistently replacing them with \lstinline{true} or \lstinline{false}) that makes the formula evaluate to \lstinline{true}. There's no efficient algorithm; you have to fill the entire truth table (in which each row is an assignment) in $O(2^n)$ time.
+The \emph{(boolean) satisfiability problem}, often abbreviated as SAT or B-SAT, is an NP-complete problem that asks whether there exists an assignment of a given propositional logic formula's boolean variables (i.e. consistently replacing them with \mintinline{java}{true} or \mintinline{java}{false}) that makes the formula evaluate to \mintinline{java}{true}. There's no efficient algorithm; you have to fill the entire truth table (in which each row is an assignment) in $O(2^n)$ time.
 
 SAT is the first problem that was proven to be NP-complete (the Cook–Levin theorem), meaning that all problems in the complexity class NP are at most as difficult to solve as SAT.
 
@@ -570,7 +555,7 @@ Q: Given a set of elements $\{1, 2, …, n\}$ (the \emph{universe}), and a colle
 
 A: The the set cover problem is an NP-hard problem. A greedy algorithm for polynomial time approximation chooses, at each step, the set that contains the largest number of uncovered elements
 
-\begin{lstlisting}
+\begin{minted}{python}
 while uncovered_elements:
     best_subset = None
     elements_covered = set()
@@ -581,7 +566,7 @@ while uncovered_elements:
             elements_covered = covered
     uncovered_elements -= elements_covered # Set subtraction
     chosen_subsets.add(best_subset)
-\end{lstlisting}
+\end{minted}
 
 \section{Problems}
 
@@ -599,29 +584,29 @@ subject to $j-\mathbf{w}_i \geq 0$, where $M_{i,j}$ is the cell at row $i$ and c
 
 \subsection{Longest Common Substring}
 
-Q: Determine the longest common \emph{substring} (i.e. consecutive characters) between two given strings.
+Q: Determine the longest common \emph{substring} (i.e. contiguous characters) between two given strings.
 
 A: Done with 2D dynamic programming, with the letters of the two words along the axes of the grid. Initialize the grid with all-zeroes, then loop (row-wise or column-wise, doesn't matter) and only change the value of a cell if:
 
-\begin{lstlisting}
+\begin{minted}{python}
 if word_a[i] == word_b[j]:
     cell[i][j] = cell[i-1][j-1] + 1
-\end{lstlisting}
+\end{minted}
 
 For most dynamic programming problems, the answer is in the last cell, but the solution here is the largest number in the grid, which isn't necessarily in the last cell.
 
 \subsection{Longest Common Subsequence}
 
-Q: Determine the the longest common \emph{subsequence} (doesn't need to be consecutive) between two given strings.
+Q: Determine the the longest common \emph{subsequence} (doesn't need to be contiguous) between two given strings.
 
 A: Done similarly to longest common substring, but you set each cell as:
 
-\begin{lstlisting}
+\begin{minted}{python}
 if word_a[i] == word_b[j]:
     cell[i][j] = cell[i-1][j-1] + 1 // Same as longest common substring
 else:
     cell[i][j] = max(cell[i-1][j], cell[i][j-1])
-\end{lstlisting}
+\end{minted}
 
 The answer is in the last cell.
 
@@ -647,9 +632,9 @@ A: Same as the answer to Contains Duplicate, but instead we use a sliding window
 
 Q: Same as Contains Duplicate II, but instead of equal values, we're looking for two numbers that differ at most by $t$, i.e. $||\mathbf{x}_i - \mathbf{x}_j|| \leq t$.
 
-A: Same as the answer to Contains Duplicate, but instead of a hash set, we use buckets with width $w = t + 1$. The bucket of any value $v$ can be determined with $\lfloor \frac{v}{w} \rfloor$. We return \lstinline{true} if, for any value, there already exists a value in the same bucket, or whether there exists a value in the two adjacent buckets with values close enough together. Because there can be at most one value per bucket (or else we can return \lstinline{true}), we can use a hash map for the buckets that maps bucket ID to its singular value. Of course, we remove values outside the window. Time: $O(n)$ Space: $O(\min(n,k))$
+A: Same as the answer to Contains Duplicate, but instead of a hash set, we use buckets with width $w = t + 1$. The bucket of any value $v$ can be determined with $\lfloor \frac{v}{w} \rfloor$. We return \mintinline{java}{true} if, for any value, there already exists a value in the same bucket, or whether there exists a value in the two adjacent buckets with values close enough together. Because there can be at most one value per bucket (or else we can return \mintinline{java}{true}), we can use a hash map for the buckets that maps bucket ID to its singular value. Of course, we remove values outside the window. Time: $O(n)$ Space: $O(\min(n,k))$
 
-\begin{lstlisting}
+\begin{minted}{python}
 def containsNearbyAlmostDuplicate(nums, k, t):
     if t < 0:
         return False
@@ -667,7 +652,7 @@ def containsNearbyAlmostDuplicate(nums, k, t):
         if i >= k:
             del buckets[self.getID(nums[i - k], w)]
     return False
-\end{lstlisting}
+\end{minted}
 
 There's also a $O(n \log n)$ answer that uses a BST as a data structure.
 
@@ -681,19 +666,19 @@ A: Use quickselect. Use the code in Section \ref{quicksort}, but tweak it to ret
 
 Q: Given an array of lowercase strings (without numbers), group the anagrams together. You can return the answer in any order.
 
-A: For each string, count its characters and create a character count string from those counts, e.g. \lstinline{abbccc} will be represented as \lstinline{#1#2#3#0#0#0...#0}. Use these character count string representations as keys in a hash map that maps them to lists of the strings with the same character counts. Time: $O(nk)$, space: $O(nk)$, where $n$ is the length of the string array and $k$ is the maximum length of a string in the array.
+A: For each string, count its characters and create a character count string from those counts, e.g. \mintinline{java}{abbccc} will be represented as \mintinline{java}{#1#2#3#0#0#0...#0}. Use these character count string representations as keys in a hash map that maps them to lists of the strings with the same character counts. Time: $O(nk)$, space: $O(nk)$, where $n$ is the length of the string array and $k$ is the maximum length of a string in the array.
 
 A slower solution is to sort every string and use those as keys. Time: $O(nk\log k)$, space: $O(nk)$
 
 \subsection{\href{https://leetcode.com/problems/product-of-array-except-self}{Product of Array Except Self}}
 
-Q: Given an integer array \lstinline{nums}, return an array with the value at each index \lstinline{i} equal to the product of all the elements of \lstinline{nums} except \lstinline{nums[i]}, without using the division operation.
+Q: Given an integer array \mintinline{java}{nums}, return an array with the value at each index \mintinline{java}{i} equal to the product of all the elements of \mintinline{java}{nums} except \mintinline{java}{nums[i]}, without using the division operation.
 
-A: Create an array \lstinline{left} and make a pass over the input array from left to right, cumulatively multiplying the input array (so \lstinline{left[i] = nums[i] * left[i-1]}), and do the same from right to left in array \lstinline{right}. Then, each element in the output array is \lstinline{left[i-1] * right[i+1]}. Time: $O(n)$, space: $O(n)$.
+A: Create an array \mintinline{java}{left} and make a pass over the input array from left to right, cumulatively multiplying the input array (so \mintinline{java}{left[i] = nums[i] * left[i-1]}), and do the same from right to left in array \mintinline{java}{right}. Then, each element in the output array is \mintinline{java}{left[i-1] * right[i+1]}. Time: $O(n)$, space: $O(n)$.
 
-A $O(1)$ space complexity optimization is to use the output array as the \lstinline{left} array, and to only maintain an integer product for the right part:
+A $O(1)$ space complexity optimization is to use the output array as the \mintinline{java}{left} array, and to only maintain an integer product for the right part:
 
-\begin{lstlisting}
+\begin{minted}{python}
 def productExceptSelf(nums):
     result = [0] * len(nums)
     result[0] = nums[0]
@@ -705,15 +690,15 @@ def productExceptSelf(nums):
         prod *= nums[i];
     result[0] = prod;
     return result
-\end{lstlisting}
+\end{minted}
 
 \subsection{\href{https://leetcode.com/problems/longest-consecutive-sequence}{Longest Consecutive Sequence}}
 
 Q: Given an unsorted array of integers, return the length of the longest consecutive elements sequence in $O(n)$ time.
 
-A: Put all numbers in a hash set (for $O(1)$ lookup), loop through all the numbers (either through the array or the set, the order doesn't matter), and for each number \lstinline{num}, check if \lstinline{num-1} is in the set. If it is, this number is not the start of a consecutive sequence and we skip. If it is, count the length of the consecutive sequence that starts with this number by incrementing it and checking whether this increment is in the set. Return the maximum of such a length.
+A: Put all numbers in a hash set (for $O(1)$ lookup), loop through all the numbers (either through the array or the set, the order doesn't matter), and for each number \mintinline{java}{num}, check if \mintinline{java}{num-1} is in the set. If it is, this number is not the start of a consecutive sequence and we skip. If it is, count the length of the consecutive sequence that starts with this number by incrementing it and checking whether this increment is in the set. Return the maximum of such a length.
 
-\begin{lstlisting}
+\begin{minted}{python}
 def longestConsecutive(nums):
     longest_streak = 0
     num_set = set(nums)
@@ -730,7 +715,7 @@ def longestConsecutive(nums):
             longest_streak = max(longest_streak, current_streak)
 
     return longest_streak
-\end{lstlisting}
+\end{minted}
 
 This is $O(n)$ time and space, because each element is processed a constant number of times; the inner while loop only runs for each consecutive sequence.
 
@@ -742,11 +727,11 @@ A: You can do this in one loop by storing numbers in a hash set (or hash map if 
 
 \subsection{\href{https://leetcode.com/problems/3sum}{3Sum}}
 
-Q: Given an integer array, return all the distinct triplets (\lstinline{[nums[i], nums[j], nums[k]]}, at distinct indices) that sum to zero.
+Q: Given an integer array, return all the distinct triplets (\mintinline{java}{[nums[i], nums[j], nums[k]]}, at distinct indices) that sum to zero.
 
 A: This is the solution to Two Sum repeated for every number (though you only have to check to the right of every number as an optimization).
 
-\begin{lstlisting}
+\begin{minted}{python}
 public List<List<Integer>> threeSum(int[] nums) {
     Set<List<Integer>> triplets = new HashSet<>();
 
@@ -764,6 +749,109 @@ public List<List<Integer>> threeSum(int[] nums) {
 
     return new ArrayList(triplets);
 }
-\end{lstlisting}
+\end{minted}
+
+\subsection{\href{https://leetcode.com/problems/container-with-most-water}{Container With Most Water}}
+
+Q: Given an integer array representing the heights of vertical lines, return the size of the largest rectangle you can span with any pair, i.e. $\max_{i,j} ( (j - i) * \min(\mathbf{x}_i, \mathbf{x}_j) )$.
+
+A: Two pointers, starting out from the outsides of the array, of which you always move the one pointing to the smallest height inward. When they're equal, it doesn't matter which one you move inward. Of course you keep track of the maximum. The intuition is that you can safely move the smallest pointer inward, because the current other pointer is at a larger height, and either all heights preceding that other pointer are shorter than and will have registered with the current pointer, or there has been a larger height before the current pointer which can only span a larger rectangle. $O(n)$ time and $O(1)$ space.
+
+\subsection{\href{https://leetcode.com/problems/house-robber}{House Robber}}
+
+Q: Given an integer array representing amounts of money stashed in houses along a street. Return the maximum amount of money you can rob without robbing two adjacent houses. The values are nonnegative.
+
+A: This is an example of bottom-up 1D dynamic programming where we need to only memorize the last two answers as mentioned in Section \ref{dynamic_programming}, so we don't need a full array. Loop front-to-back through the array, at every position updating \mintinline{java}{maxLastIncluded = nums[i] + maxLastExcluded} and \mintinline{java}{maxLastExcluded = Math.max(maxLastIncluded, maxLastExcluded)} (and using a temporary variable, because you're sort of swapping numbers). Time $O(n)$, space $O(1)$. A very concise Python implementation:
+
+\begin{minted}{python}
+def rob(nums):
+    prev, curr = 0, 0
+    for n in nums:
+        prev, curr = curr, max(curr, prev + n)
+    return curr
+\end{minted}
+
+\subsection{\href{https://leetcode.com/problems/house-robber-ii}{House Robber II}}
+
+Q: Same as House Robber, but the street is a circle, i.e. the last house is next to the first one.
+
+A: \mintinline{java}{return max(rob(nums[:-1]), rob(nums[1:]))}, where \mintinline{java}{rob()} is defined above. Time $O(n)$, space $O(1)$.
+
+\subsection{\href{https://leetcode.com/problems/house-robber-iii}{House Robber III}}
+
+Q: Same as House Robber, but the street is a binary tree, and you're given the \mintinline{java}{root}.
+
+A: A pretty straightforward adaptation of the answer to House Robber:
+
+\begin{minted}{python}
+def rob(root):
+    def returnTupleWithMaxLootThatIncludesAndExcludesThis(node):
+        if not node:
+            return (0, 0)
+        left = returnTupleWithMaxLootThatIncludesAndExcludesThis(node.left)
+        right = returnTupleWithMaxLootThatIncludesAndExcludesThis(node.right)
+        robThis = node.val + left[1] + right[1] # If we rob this node, we cannot rob its children
+        dontRobThis = max(left) + max(right) # Else we can rob either of its children
+        return [robThis, dontRobThis]
+
+    return max(returnTupleWithMaxLootThatIncludesAndExcludesThis(root))
+\end{minted}
+
+\subsection{\href{https://leetcode.com/problems/house-robber-iv}{House Robber IV}}
+
+Q: Same as House Robber, but instead of maximizing the total reward, minimize the maximum amount stolen from any single house while ensuring that at least $k$ houses are robbed.
+
+A: In Section \ref{binary_search}, we said that \textit{problems that require minimizing the maximum or maximizing the minimum often suggest a binary search approach on the range of possible values for this maximum or minimum, respectively}. Demarcate the search space of the possible values for the maximum loot by taking the minimum and maximum of all element values in the array. Then, use binary search to determine the minimum possible maximum loot of any burglary spree involving at least $k$ houses. At every iteration, you take the middle of the current search space and check whether that value can be the maximum of $k$ non-contiguous houses. This check is done by iterating through the list of house values and greedily selecting houses that have at most the value to be checked (of course skipping the next house each time we choose one). Once we rob $k$ houses, it means the current middle value is a valid maximum, in which case we move the binary search range to the left; else we move it to the right. Time $O(n \log m)$, where $m$ is the size of the search space, space $O(1)$.
+
+\subsection{\href{https://leetcode.com/problems/longest-substring-without-repeating-characters}{Longest Substring Without Repeating Characters}}
+
+Q: Find the longest \emph{substring} (i.e. contiguous characters) without duplicate characters in a given string.
+
+A: A two-pointers sliding window, where the right pointer keeps moving, and max'ing the length of the current window, until it reaches a character which is already in the set of characters currently in the window, at which point the left pointer has to be increased and those characters removed until the right pointer's character is no longer in the set. Be sure to include the character at index 0 into the set during initializiation, and to take the substring length as \mintinline{java}{right - left + 1}.
+
+\subsection{\href{https://leetcode.com/problems/longest-repeating-character-replacement}{Longest Repeating Character Replacement}}
+
+Q: Find the longest \emph{substring} (i.e. contiguous characters) of the same uppercase characters in a string of uppercase characters, in which you can convert at most $k$ characters to another character (i.e., you have $k$ wildcards).
+
+A: A two-pointers sliding window, where the right pointer keeps moving, and max'ing the length of the current window. At every iteration, a hashmap of character frequencies currently in the window\footnote{In Java, the map can be a simple \mintinline{java}{int[26]} indexed with \mintinline{java}{s.charAt(q) - 'A'}} is updated by incrementing the character at the right pointer. Also, \mintinline{java}{maxFrequency} keeps track of the maximum of any such frequency of any character in any window seen so far, and we update that as well. If \mintinline{java}{right - left + 1 - maxFrequency <= k} the window is an invalid substring, in which case the left pointer is incremented (and the corresponding frequency decremented); otherwise, the loop continues. Note that both the window size (\mintinline{java}{right - left + 1}) as well as \mintinline{java}{maxFrequency} never decreases, which doesn't matter, because we're only interested in larger windows.
+
+\subsection{\href{https://leetcode.com/problems/find-minimum-in-rotated-sorted-array}{Find Minimum in Rotated Sorted Array}}
+
+Q: Given a sorted but rotated array (e.g., \mintinline{java}{[4,5,6,7,0,1,2]} is rotated 4 times), return the minimum element of this array.
+
+A: An adaptation of binary search. While \mintinline{java}{nums[left] > nums[right]}, we continue searching in the half where the "breaking point" is (where the original last/max elements is adjacent to the original first/min element), after which we return the element at the left pointer. Time $O(\log n)$, space $O(1)$. Code:
+
+\begin{minted}{python}
+def find_min(nums):
+    p, q = 0, len(nums) - 1
+    while nums[p] > nums[q]:
+        h = (p + q) // 2
+        if nums[h] >= nums[q]:
+            p = h + 1
+        else:
+            q = h
+    return nums[p]
+\end{minted}
+
+\subsection{\href{https://leetcode.com/problems/search-in-rotated-sorted-array}{Search in Rotated Sorted Array}}
+
+Q: Given a sorted but rotated array (e.g., \mintinline{java}{[4,5,6,7,0,1,2]} is rotated 4 times), return the index of \mintinline{java}{target} (or \mintinline{java}{-1}).
+
+A: Use the answer to the previous question to find the index of the minimum element, which is the rotation amount of the array. Then use regular binary search, except whenever you index the midpoint in the array, offset it by that rotation amount and modulo it by the array length. Time $O(\log n)$, space $O(1)$.
+
+\subsection{\href{https://leetcode.com/problems/reorder-list}{Reorder List}}
+
+Q: Given the head of a singly linked-list ($L_0 \rightarrow L_1 \rightarrow ... \rightarrow L_{n-1} \rightarrow L_n$), reorder the list to $L_0 \rightarrow L_n \rightarrow L_1 \rightarrow L_{n-1} \rightarrow L_2 \rightarrow L_{n-2} \rightarrow ...$.
+
+A: Find the middle node of the linked list, reverse the second part of the list (i.e. starting from the middle node), then merge the two halves. Note that you need slightly different logic for an even number of nodes than for an uneven number of nodes. Time $O(n)$, space $O(1)$.
+
+\subsection{\href{https://leetcode.com/problems/remove-nth-node-from-end-of-list}{Remove Nth Node From End of List}}
+
+Q: Given the head of a linked list, remove the $n$th-to-last node from the list and return its head, using only one pass over the list.
+
+A: Iterate a pointer $n+1$ times, then start iterating a second pointer (so you essentially have a sliding window of size $n+1$), and when the first pointer is at the end, you can rewire the node at the second pointer to bypass the $n$th node. Time $O(n)$, space $O(1)$.
+
+
+
 
 \end{document}

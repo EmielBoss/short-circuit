@@ -1,23 +1,20 @@
-\documentclass[8pt, table, xcdraw]{article}%
+\documentclass[table, xcdraw]{article}%
 \usepackage[a4paper, top=1cm, bottom=4cm, left=2cm, right=2cm]{geometry}%
 \usepackage{amsfonts}
 \usepackage{fancyhdr}
 \usepackage{comment}
 \usepackage{times}
 \usepackage{xcolor}
-\usepackage{tikz}
 \usepackage{float}
 \usepackage{amsmath}
 \usepackage{changepage}
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{parskip}
-\usepackage{listings}
 \usepackage{lscape}
 \usepackage{enumerate}
 \usepackage{enumitem}
 \usepackage{siunitx}
-\usepackage{hyperref}
 \usepackage[bottom]{footmisc}
 \usepackage[T1]{fontenc}
 \usepackage[export]{adjustbox}
@@ -29,37 +26,11 @@
 \useunder{\uline}{\ul}{}
 \usepackage[utf8]{inputenc}
 \usepackage{bigfoot}
+\usepackage{minted}
+\usepackage{hyperref}
 
-\lstset{
- %frame=tb, % for the lines above and under the code snippets
- language=bash,
- aboveskip=3mm,
- belowskip=3mm,
- showstringspaces=false,
- columns=flexible,
- basicstyle={\footnotesize\ttfamily},
- numbers=none,
- numberstyle=\tiny\color{gray},
- keywordstyle=\color{blue},
- commentstyle=\color{gray},
- stringstyle=\color{purple},
- breaklines=true,
- breakatwhitespace=true,
- literate={_}{\textunderscore}1 {([a-z])([A-Z])}{{\1}\allowbreak{\2}}{1},
- tabsize=3,
- escapeinside={/*!}{!*/},
- escapebegin=\color{black}
-}
-
-\lstdefinestyle{yaml}{
-     basicstyle=\color{blue}\footnotesize,
-     rulecolor=\color{black},
-     string=[s]{'}{'},
-     stringstyle=\color{blue},
-     comment=[l]{:},
-     commentstyle=\color{black},
-     morecomment=[l]{-}
- }
+\setminted{breaklines, breakbefore=/, breakafter=>/_])\,, breakaftersymbolpre={}, fontsize=\footnotesize}
+\setmintedinline{breaklines, breakbefore=/, breakafter=>_]\,, breakaftersymbolpre={}, breakbeforesymbolpre={}, fontsize=\footnotesize}
 
 \title{
 \textit{Short Circuit}\\
@@ -71,7 +42,7 @@ Kubernetes\\
 The Kubernetes Book\\
 by Nigel Poulton\\
 2025 Edition\\
-\textcolor{gray}{Up until Chapter 9: Wasm on Kubernetes}
+\textcolor{gray}{Up until Chapter 10: Service discovery deep dive}
 }
 \author{Summary by Emiel Bos}
 \date{}
@@ -87,31 +58,31 @@ Kubernetes was developed by a group of Google engineers partly in response to Am
 In 2016 and 2017, Kubernetes, Docker Swarm, and Mesosphere DCOS competed to become the industry standard container orchestrator. Kubernetes won. However, Docker Swarm is still being developed and is still used by small companies needing a simple alternative to Kubernetes.
 The Kubernetes documentation uses Pascal case (aka UpperCamelCase) when referring to API objects, and the same is done here.
 
-Docker Desktop installs Docker, a multi-node Kubernetes cluster, and the \lstinline{kubectl} and \lstinline{docker} command-line utilities. Docker Desktop runs your Kubernetes cluster as containers (the user experience is exactly the same though). All major cloud providers have their own Kubernetes service as well, in case you want a multi-node cluster in the cloud. Behind the scenes, \lstinline{kubectl} reads your \emph{kubeconfig} file to know which cluster to send commands to and which credentials to authenticate with. Your kubeconfig file is called \lstinline{config} and is in \lstinline{/Users/<username>/.kube/config} (macOS) or \lstinline{C:\Users\<username>\.kube\config} (Windows). It defines a list of known Kubernetes clusters, a list of user credentials, contexts (which are pairs of clusters and credentials, e.g. you might have a context called \lstinline{ops-prod} that combines the \lstinline{ops} credentials with the \lstinline{prod} cluster), and the \lstinline{current-context}  (to which commands will be send). If using Docker Desktop, you can easily switch between contexts by clicking the
-Docker whale and choosing the Kubernetes Context option. You can run a \lstinline{kubectl config view} command to view your kubeconfig (sensitive data is redacted). You can also run a \lstinline{kubectl config current-context} to see your current context. An example of a kubeconfig:
+Docker Desktop installs Docker, a multi-node Kubernetes cluster, and the \mintinline{console}{kubectl} and \mintinline{console}{docker} command-line utilities. Docker Desktop runs your Kubernetes cluster as containers (the user experience is exactly the same though). All major cloud providers have their own Kubernetes service as well, in case you want a multi-node cluster in the cloud. Behind the scenes, \mintinline{console}{kubectl} reads your \emph{kubeconfig} file to know which cluster to send commands to and which credentials to authenticate with. Your kubeconfig file is called \mintinline{console}{config} and is in \mintinline{console}{/Users/<username>/.kube/config} (macOS) or \mintinline{console}{C:\Users\<username>\.kube\config} (Windows). It defines a list of known Kubernetes clusters, a list of user credentials, contexts (which are pairs of clusters and credentials, e.g. you might have a context called \mintinline{console}{ops-prod} that combines the \mintinline{console}{ops} credentials with the \mintinline{console}{prod} cluster), and the \mintinline{console}{current-context}  (to which commands will be send). If using Docker Desktop, you can easily switch between contexts by clicking the
+Docker whale and choosing the Kubernetes Context option. You can run a \mintinline{console}{kubectl config view} command to view your kubeconfig (sensitive data is redacted). You can also run a \mintinline{console}{kubectl config current-context} to see your current context. An example of a kubeconfig:
 
-\begin{lstlisting}
+\begin{minted}{yaml}
 apiVersion: v1
 kind: Config
 clusters: # All known clusters are listed in this block
 - name: shield # Friendly name for a cluster
   cluster:
-	server: https://192.168.1.77:8443 # Cluster's API endpoint/server
-	certificate-authority-data: LS0tLS... # Cluster's certificate
+    server: https://192.168.1.77:8443 # Cluster's API endpoint/server
+    certificate-authority-data: LS0tLS... # Cluster's certificate
 users: # Users are in this block
 - name: coulson # Friendly name (not used by Kubernetes)
   user:
-	client-certificate-data: LS0tLS1CRU... # User certificate/credentials
-	client-key-data: LS0tLS1CRUdJTiBFQyB # User private key
+    client-certificate-data: LS0tLS1CRU... # User certificate/credentials
+    client-key-data: LS0tLS1CRUdJTiBFQyB # User private key
 contexts: # List of contexts (cluster:user pairs)
 - context:
   name: director
-	cluster: shield # Send commands to this cluster
-	user: coulson # Authenticate with these credentials
+    cluster: shield # Send commands to this cluster
+    user: coulson # Authenticate with these credentials
 current-context: director # kubectl will use this context
-\end{lstlisting}
+\end{minted}
 
-Every time you execute a \lstinline{kubectl} command it converts the command into an HTTP REST request, sends the request to the Kubernetes cluster defined in the \lstinline{current-context} of your kubeconfig file, and uses the credentials specified in the \lstinline{current-context} of your kubeconfig file
+Every time you execute a \mintinline{console}{kubectl} command it converts the command into an HTTP REST request, sends the request to the Kubernetes cluster defined in the \mintinline{console}{current-context} of your kubeconfig file, and uses the credentials specified in the \mintinline{console}{current-context} of your kubeconfig file
 
 Kubernetes is both
 
@@ -132,7 +103,7 @@ Kubernetes is both
 		\begin{itemize}
 			\item The \emph{API server} is the front end of Kubernetes, and all commands and requests go through it. Even internal control plane services communicate with each other via the API server. It's a REST API over HTTPS, and all requests are subject to authentication and authorization.
 			\item The \emph{cluster store} holds the desired state of all applications and cluster components, and it’s the only stateful part of the control plane. It is based on the etcd distributed database, and most Kubernetes clusters run an etcd replica on every control plane node for HA (though this is never a substitute for backup and recovery). However, large clusters that experience a high rate of change may run a separate etcd cluster for better performance. etcd prefers an odd number of replicas to help avoid \emph{split brain conditions}, when replicas experience communication issues and cannot be sure if they have a quorum (majority). If a split-brain occurs, etcd goes into read-only mode preventing updates to the cluster. User applications will continue working, but Kubernetes won’t be able to scale or update them. Lastly, etcd uses the RAFT consensus algorithm to prevent inconsistent writes.
-			\item \emph{Controllers} implement a lot of the cluster intelligence and ensure the cluster runs what you asked it to run. At the highest level, \emph{resources} (API objects) define objects and controllers manage them. Each controller runs as a process on the control plane, and some of the more common ones include the Deployment, StatefulSet, ReplicaSet, and DaemonSet controllers, and many more. They all run as background watch loops, reconciling observed/actual/current state with desired state, in a declarative model\footnote{As opposed to the much more complex imperative model. Kubernetes supports both but prefers the declarative model, because the declarative model integrates with version control systems and enables self-healing, autoscaling, and rolling updates.} (specifying the what, not the how). Kubernetes also runs a \emph{controller manager} that is responsible for spawning and managing the individual controllers. The desired state is described in a YAML file, through a process called reconciliation. You post the YAML to the API server -- most commonly done with the \lstinline{kubectl} command-line utility -- which authenticates and authorizes it and persists it in the cluster store as a record of intent. You’ll almost always deploy Pods via controllers, not manually or individually.
+			\item \emph{Controllers} implement a lot of the cluster intelligence and ensure the cluster runs what you asked it to run. At the highest level, \emph{resources} (API objects) define objects and controllers manage them. Each controller runs as a process on the control plane, and some of the more common ones include the Deployment, StatefulSet, ReplicaSet, and DaemonSet controllers, and many more. They all run as background watch loops, reconciling observed/actual/current state with desired state, in a declarative model\footnote{As opposed to the much more complex imperative model. Kubernetes supports both but prefers the declarative model, because the declarative model integrates with version control systems and enables self-healing, autoscaling, and rolling updates.} (specifying the what, not the how). Kubernetes also runs a \emph{controller manager} that is responsible for spawning and managing the individual controllers. The desired state is described in a YAML file, through a process called reconciliation. You post the YAML to the API server -- most commonly done with the \mintinline{console}{kubectl} command-line utility -- which authenticates and authorizes it and persists it in the cluster store as a record of intent. You’ll almost always deploy Pods via controllers, not manually or individually.
 			\item The \emph{scheduler} watches the API server for new work tasks and assigns them to healthy worker nodes. Identifying capable nodes involves predicate checks, filtering, and a ranking algorithm. It checks for taints, affinity and anti-affinity rules, network port availability, and available CPU and memory. It ignores nodes incapable of running the tasks and ranks the remaining ones according to factors such as whether it already has the required image, the amount of available CPU and memory, and number of tasks it’s currently running. Each is worth points, and the nodes with the most points are selected to run the tasks. The scheduler marks tasks as pending if it can’t find a suitable node. If the cluster is configured for node autoscaling, the pending task kicks off a cluster autoscaling event that adds a new node to the cluster and the scheduler assigns the task to the new node.
 			\item If your cluster is on a public cloud, such as AWS, it will run a \emph{cloud controller manager} that integrates the cluster with cloud services, such as instances, load balancers, and storage. For example, if you’re on a cloud and an application requests a load balancer, the cloud controller manager provisions one of the cloud’s load balancers and connects it to your app.
 		\end{itemize}
@@ -140,35 +111,35 @@ Kubernetes is both
 		Control plane nodes must be Linux.
 	\end{itemize}
 
-	It’s common to run user applications on control plane nodes in development and test environments. However, many production environments restrict user applications to worker nodes so that control plane nodes can focus their resources on cluster operations. If you're running a multi-node cluster locally, you can use \lstinline{kubectl get nodes} to list the nodes in the cluster, together with their type, status, age and version of Kubernetes.
-	\item an \lstinline{orchestrator} of container applications, which is a system that deploys applications across nodes and failure zones for optimal performance and availability, and dynamically responds to changes, i.e. scaling them up and down based on demand, self-healing them when they break, rollouts and rollbacks, etc. The benefits are abstraction of infrastructure and simplified applications portability. Kubernetes is the de facto platform for cloud-native applications, and is therefore sometimes referred to as the operating system (OS) of the cloud. This is because it abstracts cloud resources and schedules application microservices the same way that operating systems like Linux and Windows abstract hardware resources and schedule application processes. Kubernetes makes it easier to deploy to one cloud today and migrate to another cloud tomorrow.
+	It’s common to run user applications on control plane nodes in development and test environments. However, many production environments restrict user applications to worker nodes so that control plane nodes can focus their resources on cluster operations. If you're running a multi-node cluster locally, you can use \mintinline{console}{kubectl get nodes} to list the nodes in the cluster, together with their type, status, age and version of Kubernetes.
+	\item an \mintinline{console}{orchestrator} of container applications, which is a system that deploys applications across nodes and failure zones for optimal performance and availability, and dynamically responds to changes, i.e. scaling them up and down based on demand, self-healing them when they break, rollouts and rollbacks, etc. The benefits are abstraction of infrastructure and simplified applications portability. Kubernetes is the de facto platform for cloud-native applications, and is therefore sometimes referred to as the operating system (OS) of the cloud. This is because it abstracts cloud resources and schedules application microservices the same way that operating systems like Linux and Windows abstract hardware resources and schedule application processes. Kubernetes makes it easier to deploy to one cloud today and migrate to another cloud tomorrow.
 \end{itemize}
 
-Kubernetes runs containers, VMs, Wasm apps, and more, all of which need wrapping in Pods before they’ll run on Kubernetes.\footnote{Containers and Wasm apps work with standard Pods, workload controllers, and runtimes. However, serverless functions run in standard Pods but require apps like Knative to extend the Kubernetes API with custom resources and controllers. Likewise, VMs need apps like KubeVirt to extend the API and run in a VirtualMachineInstance (VMI) instead of a Pod (but they are modified Pods and very similar and utilize a lot of Pod features). VMs also need custom workload controllers. VMs are the opposite of containers in that they are designed to be mutable and immortal, hence the necessasity of VMIs and custom workload controllers.} Pods can in turn be wrapped in higher-level controllers (e.g. a Deployment) for advanced features. This means there can be three layers of wrapping: the container wraps the app and provides dependencies, the Pod wraps the container so it can run on Kubernetes, and the Deployment wraps the Pod and adds self-healing, scaling, and more. Pods are lightweight and add very little overhead. Pods run on nodes.
+Kubernetes runs containers, VMs, Wasm\footnote{There are simple ways of creating Wasm apps and configuring Kubernetes to run them, e.g. the \href{https://www.spinkube.dev}{SpinKube} project automates many of the above.} apps, and more, all of which need wrapping in Pods before they’ll run on Kubernetes.\footnote{Containers and Wasm apps work with standard Pods, workload controllers, and runtimes. However, serverless functions run in standard Pods but require apps like Knative to extend the Kubernetes API with custom resources and controllers. Likewise, VMs need apps like KubeVirt to extend the API and run in a VirtualMachineInstance (VMI) instead of a Pod (but they are modified Pods and very similar and utilize a lot of Pod features). VMs also need custom workload controllers. VMs are the opposite of containers in that they are designed to be mutable and immortal, hence the necessasity of VMIs and custom workload controllers.} Pods can in turn be wrapped in higher-level controllers (e.g. a Deployment) for advanced features. This means there can be three layers of wrapping: the container wraps the app and provides dependencies, the Pod wraps the container so it can run on Kubernetes, and the Deployment wraps the Pod and adds self-healing, scaling, and more. Pods are lightweight and add very little overhead. Pods run on nodes.
 
 \section{Pods}
 
 \emph{Pods} are the atomic unit of scheduling in Kubernetes; it doesn't schedule individual containers. Kubernetes schedules containers in the same Pod to a single node (because Pods are a shared execution environment, and you can’t easily share resources across different nodes). Starting a Pod is also an atomic operation; Kubernetes only marks a Pod as ready when all its containers are running. You scale an application up by adding Pods (so not by adding containers to existing Pods) and down by deleting Pods.\\
 Pods are \emph{mortal}; once a Pod dies, Kubernetes replaces it with a new one, with a new ID and new IP. When a node fails, or a node evict Pods during node maintenance, and a Deployment controller notices this, it will delete Pods on that node and create new ones on a surviving node, even though it is based on the same Pod spec. The point is, "restarting" Pods actually means deleting and creating Pods, with new UIDs, IPs, and no state.\\
 Pods are \emph{immutable}; you never change them once they’re running, but you need to replace them. Kubernetes prevents changes to a running Pod’s configuration, but it can’t always prevent you from changing the app and/or filesystem inside of containers; you’re responsible for ensuring they're stateless and immutable. If you need to write data to a Pod, you should attach a volume to it and write to that, which will persist after the Pod is gone.\\
-Containers can actually be restarted, which is always done by the local kubelet and governed by the value of the Pod’s \lstinline{spec.restartPolicy}, which can be \lstinline{Always} (typically for long-living containers/host apps such as web servers, data stores, and message queue), \lstinline{Never} (when it doesn't matter if a container fails), or \lstinline{OnFailure} (only attempts a restart if the container fails with an error code, typically for short-living containers that run batch jobs). The policy is Pod-wide, meaning it applies to all containers in the Pod except for init containers.
+Containers can actually be restarted, which is always done by the local kubelet and governed by the value of the Pod’s \mintinline{console}{spec.restartPolicy}, which can be \mintinline{console}{Always} (typically for long-living containers/host apps such as web servers, data stores, and message queue), \mintinline{console}{Never} (when it doesn't matter if a container fails), or \mintinline{console}{OnFailure} (only attempts a restart if the container fails with an error code, typically for short-living containers that run batch jobs). The policy is Pod-wide, meaning it applies to all containers in the Pod except for init containers.
 
-The \lstinline{kubectl exec} command lets you execute commands inside running containers. You can use it in two ways:
+The \mintinline{console}{kubectl exec} command lets you execute commands inside running containers. You can use it in two ways:
 
 \begin{itemize}
-	\item \lstinline{Remote command execution} lets you send commands to a container from your local shell, with output returned to your shell: \lstinline{kubectl exec <pod> -- <command>}. Use the \lstinline{--container} option if you want to run the command in a specific container.
-	\item \lstinline{exec sessions} connect your local shell to the container’s shell -- specifically your shell’s STDIN and STDOUT streams to the STDIN and STDOUT of the container in the Pod -- and is the same as being logged on to the container in an SSH session. You do this with the \lstinline{--it} flag: \lstinline{kubectl exec -it <pod> -- sh}. The \lstinline{sh} command starts a new shell process in the session, and your prompt will change to indicate you’re now inside the container.
+	\item \mintinline{console}{Remote command execution} lets you send commands to a container from your local shell, with output returned to your shell: \mintinline{console}{kubectl exec <pod> -- <command>}. Use the \mintinline{console}{--container} option if you want to run the command in a specific container.
+	\item \mintinline{console}{exec sessions} connect your local shell to the container’s shell -- specifically your shell’s STDIN and STDOUT streams to the STDIN and STDOUT of the container in the Pod -- and is the same as being logged on to the container in an SSH session. You do this with the \mintinline{console}{--it} flag: \mintinline{console}{kubectl exec -it <pod> -- sh}. The \mintinline{console}{sh} command starts a new shell process in the session, and your prompt will change to indicate you’re now inside the container.
 \end{itemize}
 
 Every Kubernetes cluster runs a Pod network and automatically connects all Pods to it. It’s usually a flat layer-2 overlay network that spans every cluster node and allows every Pod to talk directly to every other Pod, even if the remote Pod is on a different cluster node. Your Pod network is implemented by a third-party plugin that interfaces with Kubernetes via the Container Network Interface (CNI). You choose this network plugin at cluster build time, and it configures the Pod network for the entire cluster. Lots of plugins exist, and each one has its pros and cons. Cilium is the most popular at the time of writing and implements a lot of advanced features such as security and observability.
 
 \subsection{Multi-container Pods}
 
-The simplest configurations run a single container per Pod (which is why the terms Pod and container are sometimes used interchangeably), but you can have multi-container Pods. In this way, each container is kept simple and focussed on one task, the \emph{single responsibility principle}. The container(s) run in an \emph{execution environment}, which includes a filesystem and volumes (\lstinline{mnt} namespace), network stack (\lstinline{net} namespace), memory (\lstinline{IPC} namespace), process tree (\lstinline{pid} namespace), and hostname/IP address (\lstinline{uts} namespace). These are all shared among the containers. IP address is also shared in that case, with different containers having different ports, and they can communicate with each other with the \lstinline{localhost} interface. You should use multi-container Pods for tightly coupled components that need to share resources, but you should prefer single-container Pods and loosely couple them over the network. Kubernetes has two main patterns for multi-container Pods:
+The simplest configurations run a single container per Pod (which is why the terms Pod and container are sometimes used interchangeably), but you can have multi-container Pods. In this way, each container is kept simple and focussed on one task, the \emph{single responsibility principle}. The container(s) run in an \emph{execution environment}, which includes a filesystem and volumes (\mintinline{console}{mnt} namespace), network stack (\mintinline{console}{net} namespace), memory (\mintinline{console}{IPC} namespace), process tree (\mintinline{console}{pid} namespace), and hostname/IP address (\mintinline{console}{uts} namespace). These are all shared among the containers. IP address is also shared in that case, with different containers having different ports, and they can communicate with each other with the \mintinline{console}{localhost} interface. You should use multi-container Pods for tightly coupled components that need to share resources, but you should prefer single-container Pods and loosely couple them over the network. Kubernetes has two main patterns for multi-container Pods:
 
 \begin{itemize}
-	\item \emph{init containers} are a special type of container defined in the Kubernetes API that prepare and initialize an environment so it’s ready for application containers. You run them in the same Pod as application containers, but Kubernetes guarantees they’ll start and complete before the main app container starts and that they’ll only run once. You can list multiple init containers per Pod and Kubernetes runs them in the order they appear in the Pod manifest. If any init container fails, Kubernetes attempts to restart it (or fail the Pod if you’ve set the Pod’s \lstinline{restartPolicy} to \lstinline{Never}.
-	\item \emph{sidecar containers} run alongside the main app container, and are for adding functionality to an application without having to add it directly to the application container, e.g. telemtry, scraping logs, encryption, etc. They start before the main application container, keep running alongside the main application container, and terminate after the main application container. You define sidecars as init containers (\lstinline{spec.initContainers}) with the \lstinline{restartPolicy} set to \lstinline{Always}. 
+	\item \emph{init containers} are a special type of container defined in the Kubernetes API that prepare and initialize an environment so it’s ready for application containers. You run them in the same Pod as application containers, but Kubernetes guarantees they’ll start and complete before the main app container starts and that they’ll only run once. You can list multiple init containers per Pod and Kubernetes runs them in the order they appear in the Pod manifest. If any init container fails, Kubernetes attempts to restart it (or fail the Pod if you’ve set the Pod’s \mintinline{console}{restartPolicy} to \mintinline{console}{Never}.
+	\item \emph{sidecar containers} run alongside the main app container, and are for adding functionality to an application without having to add it directly to the application container, e.g. telemtry, scraping logs, encryption, etc. They start before the main application container, keep running alongside the main application container, and terminate after the main application container. You define sidecars as init containers (\mintinline{console}{spec.initContainers}) with the \mintinline{console}{restartPolicy} set to \mintinline{console}{Always}. 
 \end{itemize}
 
 \section{Deployment}
@@ -177,14 +148,14 @@ You can deploy a Pod manually with the following steps:
 
 \begin{enumerate}
     \item Define the Pod in a YAML manifest file. An example:
-	\begin{lstlisting}
+	\begin{minted}{yaml}
 kind: Pod
 apiVersion: v1 # Build the Pod using the v1 Pod schema
 metadata:
-	name: hello-pod # Used as HOSTNAME for every container in this Pod (so it should be a valid DNS name)
-	labels: # To connect to a service for networking
-		zone: prod
-		version: v1
+    name: hello-pod # Used as HOSTNAME for every container in this Pod (so it should be a valid DNS name)
+    labels: # To connect to a service for networking
+        zone: prod
+        version: v1
 spec:
     initContainers: # Specifies init containers and sidecar containers
     # Init container
@@ -207,28 +178,28 @@ spec:
             value: "1" |
         -   name: GIT_SYNC_DEST |
             value: "html" # ...and syncs its contents into this shared volume
-	containers: # Specifies regular containers (that won't start before all initContainers are done)
-	-   name: ctr-web
-		image: nginx
+    containers: # Specifies regular containers (that won't start before all initContainers are done)
+    -   name: ctr-web
+        image: nginx
         volumeMounts:
         -   name: html
             mountPath: /usr/share/nginx/
-		ports:
-		- containerPort: 8080
-		resources:
+        ports:
+        - containerPort: 8080
+        resources:
             requests: # Minima for scheduling
                 memory: 256Mi
                 cpu: 0.5
-			limits: # Maxima for kubelet to cap
-				memory: 512Mi
-				cpu: 1.0
+            limits: # Maxima for kubelet to cap
+                memory: 512Mi
+                cpu: 1.0
     volumes:
     -   name: html
         emptyDir: {}       
-	\end{lstlisting}
+	\end{minted}
 	
 	Pods have a lot of properties, and anything you don’t explicitly define in a YAML file gets populated with defaults.
-    \item Post the manifest to the API server. \lstinline{kubectl apply -f pod.yml} will send the \lstinline{pod.yml} file to the API server defined in the current context of your kubeconfig file (and authenticates the request using credentials from your kubeconfig file). Run \lstinline{kubectl get pods} to list Pods and their status and how many of their containers are ready. Adding the \lstinline{-o wide} option gives a few more columns, and \lstinline{-o yaml} gets you everything Kubernetes knows about the object; it'll give the desired state in the \lstinline{spec} block and the current state in the \lstinline{status} block. The \lstinline{--watch} flag will make it update. Another great command is \lstinline{kubectl describe pod <pod>}, which gives a nicely formatted overview of an object, including lifecycle events. You can use the \lstinline{kubectl logs <pod> --container <container>} command to pull the logs from any container in a Pod; if you don't specify a container, it will pull from the first container in the Pod (useful for single-container Pods).
+    \item Post the manifest to the API server. \mintinline{console}{kubectl apply -f pod.yml} will send the \mintinline{console}{pod.yml} file to the API server defined in the current context of your kubeconfig file (and authenticates the request using credentials from your kubeconfig file). Run \mintinline{console}{kubectl get pods} to list Pods and their status and how many of their containers are ready. Adding the \mintinline{console}{-o wide} option gives a few more columns, and \mintinline{console}{-o yaml} gets you everything Kubernetes knows about the object; it'll give the desired state in the \mintinline{console}{spec} block and the current state in the \mintinline{console}{status} block. The \mintinline{console}{--watch} flag will make it update. Another great command is \mintinline{console}{kubectl describe pod <pod>}, which gives a nicely formatted overview of an object, including lifecycle events. You can use the \mintinline{console}{kubectl logs <pod> --container <container>} command to pull the logs from any container in a Pod; if you don't specify a container, it will pull from the first container in the Pod (useful for single-container Pods).
     \item The request is authenticated and authorized
     \item The Pod spec is validated
     \item The scheduler filters nodes based on
@@ -245,19 +216,19 @@ spec:
     \item The kubelet monitors the Pod status and reports status changes to the API server
 \end{enumerate}
 
-If it’s a short-lived Pod (e.g. a batch job), it enters the \emph{succeeded} state as soon as all containers complete their tasks. If it’s a long-lived Pod (e.g. a web server), it remains \emph{running} indefinitely. You can delete Pods with \lstinline{kubectl delete -f <pod>|<yaml>}.
+If it’s a short-lived Pod (e.g. a batch job), it enters the \emph{succeeded} state as soon as all containers complete their tasks. If it’s a long-lived Pod (e.g. a web server), it remains \emph{running} indefinitely. You can delete Pods with \mintinline{console}{kubectl delete -f <pod>|<yaml>}.
 
 The manual method is rarely used, because it creates a static Pod that cannot self-heal, scale, perform rolling updates, and if the node fails, the kubelet fails with it and cannot do anything to help the Pod, because they’re only managed by the kubelet on the node they’re running on, and kubelets are limited to restarting containers on the same node. You’ll usually deploy them via higher-level workload controllers that augment them with additional features. The most common of these controllers is a Deployment, which adds self-healing, scaling, rollouts, and rollbacks. Posting a Deployment YAML to the cluster will create a Deployment, which in turn creates and manages a ReplicaSet (which is the API object that actually provides the advertised self-healing and scaling features), which in turn creates and manages the Pods. You perform all management via the Deployment and never directly manage the ReplicaSet or Pods, so you shouldn’t directly create or edit ReplicaSets. The ReplicaSet controller makes sure the correct number of Pod replicas are always present.
 
-Modern cloud-native microservices should be loosely coupled and communicate only via well-defined via APIs, to allow updating without impacting other microservices. They should also be backward and forward compatible, to allow updating without caring which versions of clients are consuming your service. These are requirements for \emph{rollouts} (aka releases, zero-downtime updates, or rolling updates), which Kubernetes does by repeatedly creating a new replica running the new version and terminating a replica running the old version, until all replicas are on the new version.\footnote{Kubernetes actually updated (removes and creates) \lstinline{maxSurge + maxUnavailable} Pods at a time.} What happens under the hood, when you re-post an updated Deployment YAML file with a new Pod spec (e.g. with an updated image) to the API server, the Deployment controller creates a new ReplicaSet with the same number of Pods (assuming you haven't changed that) but running the newer version and systematically increments the number of Pods in the new ReplicaSet as it decrements the number in the old ReplicaSet. (Remember, when you update a Pod, you’re actually deleting it and replacing it with a new one.) You can monitor the progress with \lstinline{kubectl rollout status}. You can pause and resume it with \lstinline{kubectl rollout pause|resume deploy <deployment>}. You can manually start a rollout with \lstinline{kubectl rollout}, but this is not recommended.\\
-The old ReplicaSet is kept for \emph{rollbacks} (to an earlier version), and this is just the opposite process of a rollout. Note that rollbacks follow the same logic and rules as an update/rollout. Actually, \lstinline{revisionHistoryLimit} ReplicaSets are kept. You can see the revision history with \lstinline{kubectl rollout history deployment <deployment>}, and the ReplicaSet associated with each revision with \lstinline{kubectl get rs}. Even though it is not recommended to manually rollback, it can be convenient if it needs to be done quickly. You do this with \lstinline{kubectl rollout undo deployment <deployment> --to-revision=1}, but remember to update your source YAML files to reflect the changes.\\
-In de Pod spec/template you specify one or more labels (in \lstinline{spec.template.metadata.labels} which are given to the Pods when they're created, and then the Deployment controller knows which Pods to update based on these labels; it will select Pods that have all the selector labels with the same values. Pods and Deployments are both immutable, meaning you cannot change the selector or labels after you create the Deployment
+Modern cloud-native microservices should be loosely coupled and communicate only via well-defined via APIs, to allow updating without impacting other microservices. They should also be backward and forward compatible, to allow updating without caring which versions of clients are consuming your service. These are requirements for \emph{rollouts} (aka releases, zero-downtime updates, or rolling updates), which Kubernetes does by repeatedly creating a new replica running the new version and terminating a replica running the old version, until all replicas are on the new version.\footnote{Kubernetes actually updated (removes and creates) \mintinline{console}{maxSurge + maxUnavailable} Pods at a time.} What happens under the hood, when you re-post an updated Deployment YAML file with a new Pod spec (e.g. with an updated image) to the API server, the Deployment controller creates a new ReplicaSet with the same number of Pods (assuming you haven't changed that) but running the newer version and systematically increments the number of Pods in the new ReplicaSet as it decrements the number in the old ReplicaSet. (Remember, when you update a Pod, you’re actually deleting it and replacing it with a new one.) You can monitor the progress with \mintinline{console}{kubectl rollout status}. You can pause and resume it with \mintinline{console}{kubectl rollout pause|resume deploy <deployment>}. You can manually start a rollout with \mintinline{console}{kubectl rollout}, but this is not recommended.\\
+The old ReplicaSet is kept for \emph{rollbacks} (to an earlier version), and this is just the opposite process of a rollout. Note that rollbacks follow the same logic and rules as an update/rollout. Actually, \mintinline{console}{revisionHistoryLimit} ReplicaSets are kept. You can see the revision history with \mintinline{console}{kubectl rollout history deployment <deployment>}, and the ReplicaSet associated with each revision with \mintinline{console}{kubectl get rs}. Even though it is not recommended to manually rollback, it can be convenient if it needs to be done quickly. You do this with \mintinline{console}{kubectl rollout undo deployment <deployment> --to-revision=1}, but remember to update your source YAML files to reflect the changes.\\
+In de Pod spec/template you specify one or more labels (in \mintinline{console}{spec.template.metadata.labels} which are given to the Pods when they're created, and then the Deployment controller knows which Pods to update based on these labels; it will select Pods that have all the selector labels with the same values. Pods and Deployments are both immutable, meaning you cannot change the selector or labels after you create the Deployment
 
-\begin{lstlisting}
+\begin{minted}{yaml}
 kind: Deployment
 apiVersion: v1
 metadata:
-	name: <deployment> # Must be valid DNS name
+    name: <deployment> # Must be valid DNS name
 spec:
     replicas: 4 # No. of Pods as defined in the spec.template, used by the ReplicaSet
     selector: # List of labels the Deployment and ReplicaSet controllers look for when deciding which Pods they manage
@@ -282,11 +253,11 @@ spec:
                 image: nigelpoulton/k8sbook:1.0
                 ports:
                 - containerPort: 8080
-\end{lstlisting}
+\end{minted}
 
-Run \lstinline{kubectl apply -f <file>.yml} to create the Deployment on your cluster, i.e. persist the Deployment configuration to the cluster store as a record of intent. You can use the normal \lstinline{kubectl get deploy} or \lstinline{rs} and \lstinline{kubectl describe deploy} or \lstinline{rs} commands to see Deployment and ReplicaSet details respectively. Because the Deployment controls the ReplicaSet’s configuration, ReplicaSet info gets displayed in the output of Deployment commands. A ReplicaSet's name matches the Deployment’s name with appended with a hash of the Pod template section of the Deployment manifest (i.e. everything below \lstinline{spec.template}). You can use this name e.g. in a \lstinline{kubectl describe rs <replicaset>} command. The ReplicaSet in turn adds this hash to Pods as the \lstinline{pod-template-hash} label, and also use this label to select their pods with.\footnote{Earlier versions of Kubernetes didn't do this, such that Deployments could seize ownership of static Pods if their labels matched the Deployment’s label selector, even though they weren't meant to.} Making changes to the Pod template section initiates a rollout and creates a new ReplicaSet with a hash of the updated Pod template.
+Run \mintinline{console}{kubectl apply -f <file>.yml} to create the Deployment on your cluster, i.e. persist the Deployment configuration to the cluster store as a record of intent. You can use the normal \mintinline{console}{kubectl get deploy} or \mintinline{console}{rs} and \mintinline{console}{kubectl describe deploy} or \mintinline{console}{rs} commands to see Deployment and ReplicaSet details respectively. Because the Deployment controls the ReplicaSet’s configuration, ReplicaSet info gets displayed in the output of Deployment commands. A ReplicaSet's name matches the Deployment’s name with appended with a hash of the Pod template section of the Deployment manifest (i.e. everything below \mintinline{console}{spec.template}). You can use this name e.g. in a \mintinline{console}{kubectl describe rs <replicaset>} command. The ReplicaSet in turn adds this hash to Pods as the \mintinline{console}{pod-template-hash} label, and also use this label to select their pods with.\footnote{Earlier versions of Kubernetes didn't do this, such that Deployments could seize ownership of static Pods if their labels matched the Deployment’s label selector, even though they weren't meant to.} Making changes to the Pod template section initiates a rollout and creates a new ReplicaSet with a hash of the updated Pod template.
 
-You can scale your apps manually, either imperatively using \lstinline{kubectl scale deploy <deployment> --replicas <num>}\footnote{However, the current state of your environment will no longer matches your declarative manifest, so updating and reposting your Deployment YAML will revert this change. For this reason, the declarative way of manually scaling is preferred.}, or declaratively by updating the \lstinline{replicas} field in the Deployment YAML and reposting that. Instead of manual scaling, Kubernetes has several \emph{autoscalers} that scale based on current demand:
+You can scale your apps manually, either imperatively using \mintinline{console}{kubectl scale deploy <deployment> --replicas <num>}\footnote{However, the current state of your environment will no longer matches your declarative manifest, so updating and reposting your Deployment YAML will revert this change. For this reason, the declarative way of manually scaling is preferred.}, or declaratively by updating the \mintinline{console}{replicas} field in the Deployment YAML and reposting that. Instead of manual scaling, Kubernetes has several \emph{autoscalers} that scale based on current demand:
 
 \begin{itemize}
     \item The \emph{HorizontalPodAutoscaler} (HPA) adds and removes Pods. Installed on most clusters and widely used.
@@ -308,11 +279,11 @@ There are different types of Service:
 
 \begin{enumerate}
     \item \emph{ClusterIP} is the most basic and provides a reliable endpoint (name, IP, and port) on the internal Pod network, so they're only accessible from within the cluster. The name is automatically registered with the cluster’s internal DNS, and containers are pre-programmed to use their cluster's DNS. ClusterIP is the default if you don't specify a type.
-    \item \emph{NodePort} builds on top of ClusterIP and allow external clients to connect via a dedicated port (the \lstinline{nodePort}) on every cluster node. Kubernetes will create a ClusterIP Service with the usual internally routable IP and DNS name, and publish the \lstinline{nodePort} on every cluster node and map it to that ClusterIP, so that external clients can send traffic to any cluster node on their \lstinline{nodePort}s, and then those nodes will forward the request to the ClusterIP Service, which in turn will forward it to one of the Pods in its EndpointSlide list. There are two limitations: this uses high-numbered ports (between 30000-32767), and clients need to know the names or IPs of nodes and whether they're healthy. This is why most people use LoadBalancer Services.
+    \item \emph{NodePort} builds on top of ClusterIP and allow external clients to connect via a dedicated port (the \mintinline{console}{nodePort}) on every cluster node. Kubernetes will create a ClusterIP Service with the usual internally routable IP and DNS name, and publish the \mintinline{console}{nodePort} on every cluster node and map it to that ClusterIP, so that external clients can send traffic to any cluster node on their \mintinline{console}{nodePort}s, and then those nodes will forward the request to the ClusterIP Service, which in turn will forward it to one of the Pods in its EndpointSlide list. There are two limitations: this uses high-numbered ports (between 30000-32767), and clients need to know the names or IPs of nodes and whether they're healthy. This is why most people use LoadBalancer Services.
     \item \emph{LoadBalancer} builds on top of NodePort Services and privision a highly-available load balancer with a publicly resolvable DNS name and low port number on the underlying cloud platform in front of the cluster nodes for extremely simple access from the internet.
 \end{enumerate}
 
-\begin{lstlisting}
+\begin{minted}{yaml}
 apiVersion: v1
 kind: Service
 metadata:
@@ -328,10 +299,10 @@ spec:
     selector:
         app: hello-world # Send traffic to Pods with this label AND...
         version: v2 # this label.
-\end{lstlisting}
+\end{minted}
 
-Applying this YAML with deploy the Service declaratively. You can also create a Service for an existing deployment imperatively with \lstinline{kubectl expose deployment <deployment> --type=<type>}, which will inspect the running Deployment and by default base the port mappings and label selector on it. You can list all Services with \lstinline{kubectl get svc -o wide} and see their \lstinline{EXTERNAL-IP}, with which internet clients can connect.\footnote{When running locally, some Docker Desktop clusters incorrectly return a 172 IP address in the \lstinline{EXTERNAL-IP} column, but it should be \lstinline{localhost}.} The \lstinline{CLUSTER-IP} column lists the Service’s internal IP, that’s only routable on the internal cluster network. The \lstinline{PORT(S)} column shows the load balancer port first (8080) and then the NodePort (31755). The \lstinline{SELECTOR} column matches the Pod labels. Kubernetes has its own system Service called \lstinline{kubernetes} that exposes the Kubernetes API to all Pods and containers on the cluster. \lstinline{kubectl delete svc <service>} deletes the Service. Kubernetes will automatically delete Endpoints and EndpointSlices when you delete their associated Service.\\
-The \lstinline{kubectl describe svc <service>} gives more details on a specific service. \lstinline{Endpoints:} is the list of healthy matching Pods from the EndpointSlice object. \textbf{Session Affinity:} by default is \lstinline{None} and shows session stickiness; whether or not client connections always go to the same Pod. There's also the \lstinline{ClientIP} affinity, for when your app stores state in Pods, but this is an anti-pattern. You can inspect EndpointSlices with \lstinline{kubectl get endpointslices}, and get details for one with \lstinline{kubectl describe endpointslice <endpointslice>}.
+Applying this YAML with deploy the Service declaratively. You can also create a Service for an existing deployment imperatively with \mintinline{console}{kubectl expose deployment <deployment> --type=<type>}, which will inspect the running Deployment and by default base the port mappings and label selector on it. You can list all Services with \mintinline{console}{kubectl get svc -o wide} and see their \mintinline{console}{EXTERNAL-IP}, with which internet clients can connect.\footnote{When running locally, some Docker Desktop clusters incorrectly return a 172 IP address in the \mintinline{console}{EXTERNAL-IP} column, but it should be \mintinline{console}{localhost}.} The \mintinline{console}{CLUSTER-IP} column lists the Service’s internal IP, that’s only routable on the internal cluster network. The \mintinline{console}{PORT(S)} column shows the load balancer port first (8080) and then the NodePort (31755). The \mintinline{console}{SELECTOR} column matches the Pod labels. Kubernetes has its own system Service called \mintinline{console}{kubernetes} that exposes the Kubernetes API to all Pods and containers on the cluster. \mintinline{console}{kubectl delete svc <service>} deletes the Service. Kubernetes will automatically delete Endpoints and EndpointSlices when you delete their associated Service.\\
+The \mintinline{console}{kubectl describe svc <service>} gives more details on a specific service. \mintinline{console}{Endpoints:} is the list of healthy matching Pods from the EndpointSlice object. \textbf{Session Affinity:} by default is \mintinline{console}{None} and shows session stickiness; whether or not client connections always go to the same Pod. There's also the \mintinline{console}{ClientIP} affinity, for when your app stores state in Pods, but this is an anti-pattern. You can inspect EndpointSlices with \mintinline{console}{kubectl get endpointslices}, and get details for one with \mintinline{console}{kubectl describe endpointslice <endpointslice>}.
 
 \section{Ingress}
 
@@ -339,15 +310,15 @@ Note that, during the 3+ years Ingress was in alpha and beta, service meshes inc
 
 LoadBalancer Services still have a shortcoming in that they only provide a one-to-one mapping between internal Services and cloud load balancers, so that every internet-facing apps in a cluster will need its own cloud load balancers (and they cost money and their number may be capped). \emph{Ingress} fixes this by letting you expose multiple Services through a single cloud load balancer. It does this by creating a single cloud load balancer on port 80 or 443 and using host-based and path-based routing to map connections to different Services on the cluster. Ingress only supports HTTP and HTTPS.
 
-The Ingress API definition defines the usual two constructs: a resource to define the routing rules, and a controller to implement them. However, contrary to Deployments, ReplicaSets, Services, and most other resources that have built-in pre-configured controllers, Kubernetes doesn’t have a built-in Ingress controller, meaning you need to install one. However, some cloud platforms simplify this by allowing you to install one when you build the cluster. A popular one is the NGINX Ingress controller, which you can install with \lstinline{https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v<latest_version>/deploy/static/provider/cloud/deploy.yaml}.\footnote{This will install a bunch of Kubernetes constructs: a Namespace, ServiceAccounts, ConfigMaps, Roles, RoleBindings, etc. It will deploy a controller Pods and some short-lived Pods that initialize the environment.}
+The Ingress API definition defines the usual two constructs: a resource to define the routing rules, and a controller to implement them. However, contrary to Deployments, ReplicaSets, Services, and most other resources that have built-in pre-configured controllers, Kubernetes doesn’t have a built-in Ingress controller, meaning you need to install one. However, some cloud platforms simplify this by allowing you to install one when you build the cluster. A popular one is the NGINX Ingress controller, which you can install with \mintinline{console}{https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v<latest_version>/deploy/static/provider/cloud/deploy.yaml}.\footnote{This will install a bunch of Kubernetes constructs: a Namespace, ServiceAccounts, ConfigMaps, Roles, RoleBindings, etc. It will deploy a controller Pods and some short-lived Pods that initialize the environment.}
 
 Once you have an Ingress controller, you deploy Ingress resources with rules telling the controller how to route requests. Ingress operates at layer 7 of the OSI model; the application layer. This means it can inspect HTTP headers and forward traffic based on hostnames and paths. In other words, DNS name resolution can map different hostnames or paths to the same load balancer IP, where an Ingress controller watches the load balancer and routes the requests based on the hostnames in the HTTP headers to different Services.
 
-Ingress classes allow running multiple Ingress controllers on a single cluster. Ingress controllers and Ingress objects are each mapped to their own Ingress class. List them with \lstinline{kubectl get ingressclass}. (The NGINX controller installs the \lstinline{nginx} Ingress class.) Check a specific Ingress class with \lstinline{kubectl describe ingressclass <class>} (there's no shortname for \lstinline{ingressclass}).
+Ingress classes allow running multiple Ingress controllers on a single cluster. Ingress controllers and Ingress objects are each mapped to their own Ingress class. List them with \mintinline{console}{kubectl get ingressclass}. (The NGINX controller installs the \mintinline{console}{nginx} Ingress class.) Check a specific Ingress class with \mintinline{console}{kubectl describe ingressclass <class>} (there's no shortname for \mintinline{console}{ingressclass}).
 
 With an Ingress controller and Ingress class in place, 
 
-\begin{lstlisting}
+\begin{minted}{yaml}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -374,38 +345,40 @@ spec:
                 name: hello-world-svc
                 port:
                     number: 8080
-\end{lstlisting}
+\end{minted}
 
-You list ingress objects with \lstinline{kubectl get ing}. The \lstinline{CLASS} field may show as \lstinline{<None>} if you only have one Ingress controller and didn’t configure classes. \lstinline{HOSTS} is a list of hostnames the Ingress will handle traffic for. \lstinline{ADDRESS} field is the load balancer endpoint. You get details with \lstinline{kubectl describe ing <ingress>}. \lstinline{Default backend} is where the controller sends traffic arriving on a hostname/path it doesn’t have a route for. Not all Ingress controllers implement a default backend. The \lstinline{Rules} section defines the mappings between hosts/paths and backends. You can probably view your created load balancer through your cloud console GUI if you’re on a cloud platform. You’ll have to configure your DNS (either internal or internet-based) to point host-names to the Ingress load balancer.\footnote{For running locally, you can edit \lstinline{/etc/hosts} (for Mac or Linux) or \lstinline{C:\Windows\System32\drivers\etc\hosts} (for Windows) to add DNS mappings. This file acts as a local DNS override; when you try to access a domain, the system checks the hosts file first, before querying DNS servers on the internet.}
+You list ingress objects with \mintinline{console}{kubectl get ing}. The \mintinline{console}{CLASS} field may show as \mintinline{console}{<None>} if you only have one Ingress controller and didn’t configure classes. \mintinline{console}{HOSTS} is a list of hostnames the Ingress will handle traffic for. \mintinline{console}{ADDRESS} field is the load balancer endpoint. You get details with \mintinline{console}{kubectl describe ing <ingress>}. \mintinline{console}{Default backend} is where the controller sends traffic arriving on a hostname/path it doesn’t have a route for. Not all Ingress controllers implement a default backend. The \mintinline{console}{Rules} section defines the mappings between hosts/paths and backends. You can probably view your created load balancer through your cloud console GUI if you’re on a cloud platform. You’ll have to configure your DNS (either internal or internet-based) to point host-names to the Ingress load balancer.\footnote{For running locally, you can edit \mintinline{console}{/etc/hosts} (for Mac or Linux) or \mintinline{console}{C:\Windows\System32\drivers\etc\hosts} (for Windows) to add DNS mappings. This file acts as a local DNS override; when you try to access a domain, the system checks the hosts file first, before querying DNS servers on the internet.}
 
 \section{Namespace}
 
-You can divide a Kubernetes cluster into multiple \emph{virtual clusters} with \emph{Namespaces}.\footnote{Not to be confused with Linux kernel namespaces, which partition operating systems into virtual operating systems called containers.} The \lstinline{kubectl api-resources} command prints the API resources/objects (Pods, services, deployments, etc.) supported on the server, and whether they are namespaced, i.e., whether you can deploy to specific Namespaces with custom policies and quotas. Each Namespace can have its own users, permissions, resource quotas, and policies\\
-A \emph{tenant} is a loose term that can refer to individual applications, different teams or departments, or even external customers. Namespaces are most commonly used to divide clusters for use by tenants within the same organization, such that multiple tenants can share the same cluster. Namespaces are easy to setup and manage, but only provide soft isolation and cannot prevent compromised workloads from escaping the Namespace and impacting workloads in others. \footnote{This is why using Namespaces to divide a cluster among external tenants isn’t as common. At the time of writing, the most common way of strongly isolating tenants is to run them on their own clusters and their own hardware.} For example, a production cluster can be divided into the \lstinline{finance}, \lstinline{hr}, \lstinline{corporate-ops}, etc. Namespaces.
+You can divide a Kubernetes cluster into multiple \emph{virtual clusters} with \emph{Namespaces}.\footnote{Not to be confused with Linux kernel namespaces, which partition operating systems into virtual operating systems called containers.} The \mintinline{console}{kubectl api-resources} command prints the API resources/objects (Pods, services, deployments, etc.) supported on the server, and whether they are namespaced, i.e., whether you can deploy to specific Namespaces with custom policies and quotas. Each Namespace can have its own users, permissions, resource quotas, and policies\\
+A \emph{tenant} is a loose term that can refer to individual applications, different teams or departments, or even external customers. Namespaces are most commonly used to divide clusters for use by tenants within the same organization, such that multiple tenants can share the same cluster. Namespaces are easy to setup and manage, but only provide soft isolation and cannot prevent compromised workloads from escaping the Namespace and impacting workloads in others. \footnote{This is why using Namespaces to divide a cluster among external tenants isn’t as common. At the time of writing, the most common way of strongly isolating tenants is to run them on their own clusters and their own hardware.} For example, a production cluster can be divided into the \mintinline{console}{finance}, \mintinline{console}{hr}, \mintinline{console}{corporate-ops}, etc. Namespaces.
 
-You can list Namespaces with the \lstinline{kubectl get namespaces} or \lstinline{kubectl get ns} command.\footnote{You can substitute \lstinline{namespace} with \lstinline{ns} when working with kubectl. You can also add \lstinline{-n} or \lstinline{--namespace} to kubectl commands to filter results against a specific Namespace. When working with a specific Namespace, it can be annoying having to add the \lstinline{-n} or \lstinline{--namespace} flag on all your kubectl commands. For this reason, you can set your kubeconfig to run all future kubectl command against a specific Namespace with \lstinline{kubectl config set-context --current --namespace <namespace>}. Make sure you set it to the \lstinline{default} Namespace again when you're done.} Every Kubernetes cluster has a set of pre-created Namespaces: \lstinline{default} is where objects are deployed if you don't specify a Namespace, \lstinline{kube-system} is where control plane components such as the internal DNS service and the metrics server run, \lstinline{kube-public} is for objects that need to be readable by anyone, and \lstinline{kube-node-lease} is used for node heartbeats and managing node leases. You can inspect a Namespaces on your cluster with \lstinline{kubectl describe ns <namespace>}.
+You can list Namespaces with the \mintinline{console}{kubectl get namespaces} or \mintinline{console}{kubectl get ns} command.\footnote{You can substitute \mintinline{console}{namespace} with \mintinline{console}{ns} when working with kubectl. You can also add \mintinline{console}{-n} or \mintinline{console}{--namespace} to kubectl commands to filter results against a specific Namespace. When working with a specific Namespace, it can be annoying having to add the \mintinline{console}{-n} or \mintinline{console}{--namespace} flag on all your kubectl commands. For this reason, you can set your kubeconfig to run all future kubectl command against a specific Namespace with \mintinline{console}{kubectl config set-context --current --namespace <namespace>}. Make sure you set it to the \mintinline{console}{default} Namespace again when you're done.} Every Kubernetes cluster has a set of pre-created Namespaces: \mintinline{console}{default} is where objects are deployed if you don't specify a Namespace, \mintinline{console}{kube-system} is where control plane components such as the internal DNS service and the metrics server run, \mintinline{console}{kube-public} is for objects that need to be readable by anyone, and \mintinline{console}{kube-node-lease} is used for node heartbeats and managing node leases. You can inspect a Namespaces on your cluster with \mintinline{console}{kubectl describe ns <namespace>}.
 
-Namespaces are first-class resources in the core v1 API group, meaning they’re stable, well-understood, and have been around for a long time. You can work with them imperatively via the CLI and declaratively via YAML config files. You can create a new Namespace imperatively with \lstinline{kubectl create ns <namespace>} or declaratively with:
+Namespaces are first-class resources in the core v1 API group, meaning they’re stable, well-understood, and have been around for a long time. You can work with them imperatively via the CLI and declaratively via YAML config files. You can create a new Namespace imperatively with \mintinline{console}{kubectl create ns <namespace>} or declaratively with:
 
-\begin{lstlisting}
+\begin{minted}{yaml}
 kind: Namespace
 apiVersion: v1
 metadata:
     name: <namespace>
     labels:
         env: <some_variable>
-\end{lstlisting}
+\end{minted}
 
-and running \lstinline{kubectl apply -f <file>.yml}. You delete a Namespace with \lstinline{kubectl delete ns <namespace>}.\\
-You can refer to Namespaces imperatively with the aforementioned \lstinline{-n} or \lstinline{--namespace} flags, or declaratively:
+and running \mintinline{console}{kubectl apply -f <file>.yml}. You delete a Namespace with \mintinline{console}{kubectl delete ns <namespace>}.\\
+You can refer to Namespaces imperatively with the aforementioned \mintinline{console}{-n} or \mintinline{console}{--namespace} flags, or declaratively:
 
-\begin{lstlisting}
+\begin{minted}{yaml}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
     namespace: <namespace>
     name: default
-\end{lstlisting}
+\end{minted}
+
+
 
 
 
