@@ -121,7 +121,7 @@ Hash tables have $O(1)$ time complexity for inserting, removing and searching\fo
 
 \subsection{Graphs}
 
-\emph{Graphs} have $V$ vertices and $E$ edges, where the edges may have a direction (represented with an arrow rather than a line). For directed graphs, $E \leq V^2$ (vertices can point to themselves). In undirected graphs, edges don't have a direction. In directed graphs, nodes have in-neighbours (that points toward them) and out-neighbours.
+\emph{Graphs} have $n$ nodes/vertices and $m$ edges, where the edges may have a direction (represented with an arrow rather than a line). For directed graphs, $n \leq m^2$ (vertices can point to themselves). In undirected graphs, edges don't have a direction. In directed graphs, nodes have in-neighbours (that points toward them) and out-neighbours.
 
 Graphs are most often represented as an \emph{adjacency list}, which concretely is either
 
@@ -131,9 +131,7 @@ Graphs are most often represented as an \emph{adjacency list}, which concretely 
     \item a list of node pairs.
 \end{itemize}
 
-Time complexities are often expressed as something like $O(V + E)$, or sometimes like $O(n + m)$, where $n = V$ and $m = E$.
-
-A \emph{topological sort} is (one of multiple possible) valid ordered lists of a directional graph.
+A \emph{topological sort} is (one of multiple possible) valid ordered lists of a directional graph. You can use DFS or Kahn's algorithm (see Section \ref{kahns_algorithm}) to get a topological sort (both are also useful for cycle detection).
 
 In a \emph{weighted graph}, each edge has an associated \emph{weight}. One way of implementing/representing a weighted graph in code is with a nested hash table: the top-level table maps each node to a nested table, which in turn maps (only) that node's out-neighbours to their weights.
 
@@ -141,7 +139,7 @@ Graphs are less commonly represented as a matrix, a 2D array in which each \text
 
 \subsubsection{Trees}
 
-A \emph{tree} is a \emph{connected} (there is path between every pair of nodes) \emph{acyclic} (there are no cycles) graph. \emph{Rooted trees} have exactly one node that leads to all the other nodes: the \emph{root}, which doesn't have parents. We'll only discuss rooted trees. Nodes can have children and a parent. Nodes with no children are \emph{leaf nodes}.
+A \emph{tree} is a \emph{connected} (there is path between every pair of nodes) \emph{acyclic} (there are no cycles) graph. \emph{Rooted trees} have exactly one node that leads to all the other nodes: the \emph{root}, which doesn't have parents. Nodes can have children and a parent. Nodes with no children are \emph{leaf nodes}. A valid tree has exactly $m = n-1$ edges.
 
 A \emph{binary tree} is a special type of tree where nodes can have at most two children. They're highly similar to linked lists, but with different terminology and no cycles. Rather than one \mintinline{java}{next} pointer, each node has two \mintinline{java}{left} and \mintinline{java}{right} pointers, and likely also a \mintinline{java}{parent} pointer. The \emph{height} of a binary tree is the longest path from the root node to any leaf node. The \emph{depth} of a node is the length of the path to the root. Huffman coding (the foundation for text compression algorithms) uses binary trees.
 
@@ -166,17 +164,23 @@ A different take on balanced BSTs. If you have recently looked up an item, the n
 
 B-trees are a generalized form of binary tree, where each node can have more than one key and more than two children. More specifically, a node's number of children is one greater than it's number of keys. \emph{Seek time} is the time it takes for the hard disc's read/write head to move to the correct track, i.e., it's a physical mechanism that introduces a delay. B-trees optimize this seek time. They spend more time reading each node, but they seek less because they read more data into memory in one go. For this reason, they're a popular data structure for databases. Like BSTs, everything in a node's left/right subtree is less/greater than the node's value.
 
-\paragraph{Trie}
+\paragraph{Tries}
 
 A \emph{trie}, or prefix tree, is a rooted tree data structure used for retrieval of a key in a dataset of strings. It's used for autocomplete, spellchecking, IP routing, etc. Each node in the tree has a link for each possible character (which by default are null) and a boolean indicating if the current node ends a valid word that has been added (else its just a prefix).\footnote{You can also visualize it as the nodes indicating characters, with the root node representing the empty string "", but I find it more intuitive to have the links contain the characters.} If $m$ is the word/key length, insertion is $O(m)$ time and space, searching for the exact input word and searching any word with the given prefix is $O(m)$ time and $O(1)$ space. For insertion and search, hash tables are equally as good, but they don't support prefix search.
+
+\paragraph{Segment trees}
+
+A \emph{prefix}/\emph{postfix} is a subarray (contiguous) that starts at the beginning/ends at the end of an array. Prefix sums allow quickly querying the sum of a subarray: if you have the prefix sum respectively product up until each index of an array, you can query the sum/product of any subarray demarcated by \mintinline{python}{i,j} in constant time as \mintinline{python}{prefixSum[j] - prefixSum[i-1]}. However, you can't update elements. Segment trees allow for both querying subarray sums and updating elements, both in $O(\log n)$. Segment trees are balanced binary trees, where each node stores the left and right (inclusive) indices of the subarray it represents, the sum of that subarray, and pointers to its left and right children, where the left child represents range \mintinline{python}{L,M} and the right child represents \mintinline{python}{M+1,R}. The tree is built bottom-up, so the root node takes \mintinline{python}{0, arr.length-1} and recursively splits that at \mintinline{python}{M = (L+R)//2} and creates the child nodes, and after both recursions, computes its sum from the sums of its children. The base case is if \mintinline{python}{L==R}, which is a leaf node representing one element.
+Updating an index \mintinline{python}{i} entails recursively traversing the tree, at each node picking the left child if \mintinline{python}{i <= (L+R)//2} and the right child if \mintinline{python}{i > (L+R)//2}, and at the base case/leaf node, updating the sum and recalculating all parent sums, just as when building the tree.
+Searching the sum of subarray \mintinline{python}{L,R} entails recursively traversing the tree as well. At each node, if \mintinline{python}{l == L && r == R}, we return the node's sum, else if \mintinline{python}{l > (L+R)//2}, we only recurse right, if \mintinline{python}{r <= (L+R)//2}, we only recurse left, and else we need to recurse both and add the results. Often, the leaf nodes aren't even reached, but we can backtrack earlier already.
 
 \subsubsection{Forest}
 
 A \emph{forest} is a disjoint union (basically a collection) of trees.
 
-\paragraph{Union-find}
+\paragraph{Union-find} \label{union_find}
 
-A \emph{union-find}, also known as a disjoint-set or merge-find, stores a collection of disjoint (non-overlapping) sets -- a partitioning of a set into disjoint subsets. They're often implemented as a forest of trees data structure that can be used on undirected graphs with disjoint connected components for counting the number of connected components and for cycle detection. The trees aren't meant to accurately represent the graph. Given the number of nodes and a list of unique, undirected edges (so \mintinline{java}{[1,2]} and \mintinline{java}{[2,1]} won't both appear), we assume each node is disjoint initially. We keep track of a parent pointer for each node (stored in a hash map, mapping node value to parent node), and the rank (height) of each tree (also stored in a hash map, with the root IDs as keys), which we want as small as possible for best performance. Iterating through the list of edges, for each edge (i.e. pair of nodes), we find the roots of the trees of both nodes by following the nodes' parent pointers. If the roots are the same, the nodes are already in the same tree, and since edges in the list are unique, there is a cycle. Else, we parent the root of the smallest tree (\mintinline{java}{ranks[root]}) to the root of the largest tree. If both trees have the same rank, choose one of two parentings and increase the relevant rank. While finding the roots, we can do path compression, i.e. we keep track of all nodes in the path, and then parent those all to the root after we found it.
+A \emph{union-find}, also known as a disjoint-set or merge-find, stores a collection of disjoint (non-overlapping) sets -- a partitioning of a set into disjoint subsets. They're often implemented as a forest of trees data structure that can be used on undirected graphs with disjoint connected components for counting the number of connected components and for cycle detection. The trees aren't meant to accurately represent the graph. Given the number of nodes and a list of unique, undirected edges (so \mintinline{java}{[1,2]} and \mintinline{java}{[2,1]} won't both appear), we assume each node is disjoint initially. We keep track of a parent pointer for each node (stored in a hash map, mapping node value to parent node), and the rank (height) of each tree (also stored in a hash map, with the root values as keys), which we want as small as possible for best performance. Iterating through the list of edges, for each edge (i.e. pair of nodes), we find the roots of the trees of both nodes by following the nodes' parent pointers. If the roots are the same, the nodes are already in the same tree, and since edges in the list are unique, there is a cycle. Else, we parent the root of the smallest tree (\mintinline{java}{ranks[root]}) to the root of the largest tree. If both trees have the same rank, choose one of two parentings and increase the relevant rank. While finding the roots, we can do path compression, i.e. at all levels/calls of recursion, parent the result of the subrecursion (the found root) to the input node.
 
 \subsection{Priority queues}
 
@@ -213,11 +217,36 @@ Searching a priority queue for an element is $O(n)$, but that's not their use an
 \end{itemize}
 
 \subsection{Recursion}
+
 \emph{Recursion} happens when a function calls itself. There’s no performance benefit; it is used when it makes the solution clearer. Every recursive function has a \emph{base case} (or else it would loop infinitely) and the \emph{recursive case}. Each of the recursive function calls takes up some memory on the \emph{call stack}. If your recursion may go too deep and the call stack runs out of space, you can rewrite your code to use a loop instead, or use \emph{tail recursion}.
 
 One-branch recursion (for example: calculating a factorial) is at least $O(n)$ time and space complexity (because the function call takes up space). Two-branch recursion (for example: calculating Fibonacci sequence) is also at least $O(n)$ time and space complexity.
 
-\emph{Divide-and-conquer} algorithms are two-branch recursive algorithms that divides or splits up a problem in smaller problems, each is solved recursively, until a base case is hit.
+\subsection{Dynamic programming} \label{dynamic_programming}
+
+\emph{Dynamic programming} (DP) breaks a problem down into subproblems and solves each of those while storing the results. Can replace brute-force recursion when there is a lot of repeated work being done. For a problem to be solved by dynamic programming, it needs to have:
+
+\begin{itemize}
+    \item \emph{Optimal substructure}: the optimal solution can be obtained by the combination of optimal solutions to its sub-problems. The subproblems are usually described by means of recursion.
+    \item \emph{Overlapping sub-problems}: the solutions to the subproblems are needed again and again in computing any of the superproblems. You could recompute them each time, but this often leads to exponential complexity, hence dynamic programming algorithms store\footnote{Usually in a 1D or 2D array, but there are plenty of problems that only require constant space.} them for lookup later, called \emph{memoization}.
+\end{itemize}
+
+If a problem has optimal substructure, but non-overlapping sub-problems, you'd need a divide-and-conquer algorithm instead.
+
+Dynamic programming solutions consist of three components: a data structure to store answers to subproblems (typically a 1D or 2D array or hash map, but can also be a small, fixed number of variables), a recurrence relation describing how an answer depends on answers to subproblems, and a base case.
+
+There are two variations, and in principle both are always possible solutions:
+
+\begin{itemize}
+    \item Top-down DP still uses recursion, but with caching added. It starts with the main problem and works down.
+    \item Bottom-up DP is iterative and starts with base cases and then works towards the main problem. Often called "true DP", and likely has better space complexity than top-down. In 1D dynamic programming, if the answer to subproblem $i$ only depends on only a small constant of preceding answers $i-1, i-2, ...$, you can save space by only memorizing those last couple of answers, rotating them in a constant-size array. In some cases, the answer of a subproblem depends on all preceding answers (e.g. when you need the maximum or minimum answer), in which case you'd get $O(n^2)$ time complexity, but it is still dynamic programming.
+\end{itemize}
+
+Giveaways that a problem should be solved with dynamic programming are: asking for the minimum or maximum of something, having to make decisions that may depend on previously made decisions (very typical of a problem involving subsequences), or when you’re trying to optimize something given a constraint.
+
+\subsection{Divide-and-conquer}
+
+\emph{Divide-and-conquer} algorithms are two-branch recursive algorithms that divides or splits up a problem in smaller problems, each is solved recursively, until a base case is hit. Problems that can be solved with divide-and-conquer exhibit optimal substructure, but not overlapping sub-problems (see Section \ref{dynamic_programming}), so there's no point in storing solutions to sub-problems.
 
 \subsection{Binary search} \label{binary_search}
 
@@ -425,6 +454,8 @@ def dfs(graph, start, visited=None):
     return visited
 \end{minted}
 
+DFS can also be done iteratively with a stack, in which case the algorithm is almost identical to BFS (just with a stack instead of a queue).
+
 \subsubsection{Dijkstra's Algorithm}
 
 For finding the shortest path from \mintinline{java}{start} to \mintinline{java}{end} in a weighted graph. Only works on graphs with no cycles and where all the edges are nonnegative.
@@ -470,6 +501,10 @@ def find_lowest_cost_node(costs):
     return lowest_cost_node
 \end{minted}
 
+\subsubsection{Kahn's algorithm} \label{kahns_algorithm}
+
+Kahn algorithm is one way to get a topological sorting of a directed graph (or to determine whether it has a cycle) (DFS can also do both). Starting with an empty list for the ordered nodes and a queue of leaf nodes (with no incoming edges), you iterate until the queue is empty: pop a node from the queue, add it to the list, and for every out-neighbour: remove the edge from the graph, and add it to the queue if it has no in-neighbours anymore. If your ordered list is the total number of nodes, there are no cycles.
+
 \subsubsection{Trees}
 
 \paragraph{DFS on BST}
@@ -485,8 +520,14 @@ def dfs(root):
     dfs(root.right)
 \end{minted}
 
-In preorder traversal, the operation is done before recursing into the left subtree. In postorder traversal, the operation is done after recursing into the right subtree.\\
-Recursive is almost always easiest, but can also be implemented iteratively with a stack. The different forms of iterative traversal with a stack-based implementation (in order of intuitiveness):
+In preorder traversal, the operation on the node is done before recursing into the left subtree. In postorder traversal, the operation is done after recursing into the right subtree.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{dfs_traversals.png}
+\end{figure}
+
+Though recursive is almost always far easier, the three forms of traversal can also be implemented iteratively with a stack. The different forms of iterative traversal with a stack-based implementation (in order of intuitiveness):
 
 \begin{itemize}
     \item Preorder: at each current node, do the operation, push the right child onto the stack, set the left child as the current node, and repeat. If the current node is null, pop the current node from the stack. Repeat until the stack is empty.
@@ -501,27 +542,6 @@ The least common graph representation is the adjacency matrix, a 2D array in whi
 \subsection{Backtracking}
 
 \emph{Backtracking algorithms} (or rather, "backtracking metaheuristics") find solutions to some computational problems, notably constraint satisfaction problems, by incrementally building candidates to the solutions, and abandoning a candidate ("backtracking") as soon as they determine that the candidate cannot possibly be (part of) a valid solution. Backtracking can be applied only for problems which can have "partial candidate solutions" and an efficient test of whether it is invalid. If that's the case, backtracking is often much faster than brute-force enumeration of all complete candidates. Conceptually, the partial candidates can be represented as nodes of a search tree. Each partial candidate is the parent of the candidates that differ from it by a single extension step; the leaves of the tree are the partial candidates that cannot be extended any further. A backtracking algorithm traverses this search tree recursively, from the root down, in depth-first order.
-
-\subsection{Dynamic programming} \label{dynamic_programming}
-
-\emph{Dynamic programming} (DP) breaks a problem down into subproblems and solves each of those while storing the results. Can replace brute-force recursion when there is a lot of repeated work being done. It is based on the idea of \emph{memoization}: calculating the result of a subproblem and storing it (in a hash table or array) for lookup later. Two variations:
-
-\begin{itemize}
-    \item Top-down DP still uses recursion, but with caching added. It starts with the main problem and works down.
-    \item Bottom-up DP is iterative and starts with base cases and then works towards the main problem. Often called "true DP", and likely has better space complexity than top-down. In 1D dynamic programming, if the answer to subproblem $i$ only depends on only a few answers to subproblems $i-1, i-2, ...$, you can save space by only memorizing those last couple of answers, rotating them in a constant-size array.
-\end{itemize}
-
-Giveaways that a problem should be solved with dynamic programming are: asking for the minimum or maximum of something, having to make decisions that may depend on previously made decisions (very typical of a problem involving subsequences), or when you’re trying to optimize something given a constraint.
-
-Characteristics of problems that can be solved with dynamic programming:
-
-\begin{itemize}
-    \item Optimal substructures: the optimal result relies on the optimal result of one or more substructures.
-    \item Overlapping sub-problems
-    \item It can be broken down into discrete subproblems that don’t depend on each other
-\end{itemize}
-
-Dynamic programming only works when each subproblem is discrete, i.e. when it doesn’t depend on other subproblems.
 
 \subsection{Sliding window algorithms}
 
@@ -551,7 +571,7 @@ The \emph{traveling salesman problem}, often abbreviated as TSP, is an NP-hard p
 
 \subsubsection{Set cover problem}
 
-Q: Given a set of elements $\{1, 2, …, n\}$ (the \emph{universe}), and a collection $S$ of $m$ subsets of universe whose union equals the universe, identify a smallest sub-collection of $S$ whose union equals the universe.
+Q: Given a set of elements $\{1, 2, ..., n\}$ (the \emph{universe}), and a collection $S$ of $m$ subsets of universe whose union equals the universe, identify a smallest sub-collection of $S$ whose union equals the universe.
 
 A: The the set cover problem is an NP-hard problem. A greedy algorithm for polynomial time approximation chooses, at each step, the set that contains the largest number of uncovered elements
 
@@ -570,6 +590,8 @@ while uncovered_elements:
 
 \section{Problems}
 
+This sections summarizes algorithmic problems and their solutions. Sometimes, multiple solutions are possible, in which case they're ordered from good (enough) to better. For dynamic programming solutions, we generally only treat the bottom-up solution, but a top-down solution is always possible.
+
 \subsection{Knapsack}
 
 Q: Given a set of items, each with a weight and a value, determine a subset of items that maximizes the total value while satisfying the weight constraint.
@@ -581,34 +603,6 @@ A: Evaluating all subsets is $O(2^n)$. The greedy strategy of picking the most v
 \end{equation*}
 
 subject to $j-\mathbf{w}_i \geq 0$, where $M_{i,j}$ is the cell at row $i$ and column $j$ in matrix $M$, and $\mathbf{w}_i$ and $\mathbf{v}_i$ are the weight and value of the $i$\textsuperscript{th} least heavy item. In other words, we either the take the previous max value (i.e. without the item under consideration), or we take the value of the item plus the max value of the remaining space (as long as that's at least $0$).
-
-\subsection{Longest Common Substring}
-
-Q: Determine the longest common \emph{substring} (i.e. contiguous characters) between two given strings.
-
-A: Done with 2D dynamic programming, with the letters of the two words along the axes of the grid. Initialize the grid with all-zeroes, then loop (row-wise or column-wise, doesn't matter) and only change the value of a cell if:
-
-\begin{minted}{python}
-if word_a[i] == word_b[j]:
-    cell[i][j] = cell[i-1][j-1] + 1
-\end{minted}
-
-For most dynamic programming problems, the answer is in the last cell, but the solution here is the largest number in the grid, which isn't necessarily in the last cell.
-
-\subsection{Longest Common Subsequence}
-
-Q: Determine the the longest common \emph{subsequence} (doesn't need to be contiguous) between two given strings.
-
-A: Done similarly to longest common substring, but you set each cell as:
-
-\begin{minted}{python}
-if word_a[i] == word_b[j]:
-    cell[i][j] = cell[i-1][j-1] + 1 // Same as longest common substring
-else:
-    cell[i][j] = max(cell[i-1][j], cell[i][j-1])
-\end{minted}
-
-The answer is in the last cell.
 
 \subsection{Linked List Cycle Detection}
 
@@ -757,11 +751,176 @@ Q: Given an integer array representing the heights of vertical lines, return the
 
 A: Two pointers, starting out from the outsides of the array, of which you always move the one pointing to the smallest height inward. When they're equal, it doesn't matter which one you move inward. Of course you keep track of the maximum. The intuition is that you can safely move the smallest pointer inward, because the current other pointer is at a larger height, and either all heights preceding that other pointer are shorter than and will have registered with the current pointer, or there has been a larger height before the current pointer which can only span a larger rectangle. $O(n)$ time and $O(1)$ space.
 
+\subsection{\href{https://leetcode.com/problems/longest-substring-without-repeating-characters}{Longest Substring Without Repeating Characters}}
+
+Q: Find the longest \emph{substring} (i.e. contiguous characters) without duplicate characters in a given string.
+
+A: A two-pointers sliding window, where the right pointer keeps moving, and max'ing the length of the current window, until it reaches a character which is already in the set of characters currently in the window, at which point the left pointer has to be increased and those characters removed until the right pointer's character is no longer in the set. Be sure to include the character at index 0 into the set during initializiation, and to take the substring length as \mintinline{java}{right - left + 1}. Time $O(n)$, space $O(n)$.
+
+\subsection{\href{https://leetcode.com/problems/longest-repeating-character-replacement}{Longest Repeating Character Replacement}}
+
+Q: Find the longest \emph{substring} (i.e. contiguous characters) of the same uppercase characters in a string of uppercase characters, in which you can convert at most $k$ characters to another character (i.e., you have $k$ wildcards).
+
+A: A two-pointers sliding window, where the right pointer keeps moving, and max'ing the length of the current window. At every iteration, a hashmap of character frequencies currently in the window\footnote{In Java, the map can be a simple \mintinline{java}{int[26]} indexed with \mintinline{java}{s.charAt(q) - 'A'}} is updated by incrementing the character at the right pointer. Also, \mintinline{java}{maxFrequency} keeps track of the maximum of any such frequency of any character in any window seen so far, and we update that as well. If \mintinline{java}{right - left + 1 - maxFrequency <= k} the window is an invalid substring, in which case the left pointer is incremented (and the corresponding frequency decremented); otherwise, the loop continues. Note that both the window size (\mintinline{java}{right - left + 1}) as well as \mintinline{java}{maxFrequency} never decreases, which doesn't matter, because we're only interested in larger windows. Time $O(n)$, space $O(n)$.
+
+\subsection{\href{https://leetcode.com/problems/minimum-window-substring}{Minimum Window Substring}}
+
+Q: Given two strings \mintinline{java}{s} and \mintinline{java}{t}, return the minimum window/substring (i.e. contiguous characters) of \mintinline{java}{s} such that every character in \mintinline{java}{t} (including duplicates) is included in the window. If there is no such substring, return the empty string.
+
+A: Actually medium. You first create a \mintinline{python}{charCounts} hash map containing the character frequencies in \mintinline{python}{t} and a \mintinline{python}{charCount} for the total number of characters. You use a sliding window, and use \mintinline{python}{charCount < 1} to check whether you currently have a valid window and \mintinline{python}{charCounts} to keep track of how many characters of each you still need for a valid window. Since characters can enter the window of which there are already sufficient duplicates in the window, character counts in \mintinline{python}{charCounts} can get negative, only increment or decrement \mintinline{python}{charCount} if the character's count in \mintinline{python}{charCounts} is nonnegative. Time $O(n)$, space $O(n)$.
+
+\subsection{\href{https://leetcode.com/problems/find-minimum-in-rotated-sorted-array}{Find Minimum in Rotated Sorted Array}}
+
+Q: Given a sorted but rotated array (e.g., \mintinline{java}{[4,5,6,7,0,1,2]} is rotated 4 times), return the minimum element of this array.
+
+A: An adaptation of binary search. While \mintinline{java}{nums[left] > nums[right]}, we continue searching in the half where the "breaking point" is (where the original last/max elements is adjacent to the original first/min element), after which we return the element at the left pointer. Time $O(\log n)$, space $O(1)$. Code:
+
+\begin{minted}{python}
+def find_min(nums):
+    p, q = 0, len(nums) - 1
+    while nums[p] > nums[q]:
+        h = (p + q) // 2
+        if nums[h] >= nums[q]:
+            p = h + 1
+        else:
+            q = h
+    return nums[p]
+\end{minted}
+
+\subsection{\href{https://leetcode.com/problems/search-in-rotated-sorted-array}{Search in Rotated Sorted Array}}
+
+Q: Given a sorted but rotated array (e.g., \mintinline{java}{[4,5,6,7,0,1,2]} is rotated 4 times), return the index of \mintinline{java}{target} (or \mintinline{java}{-1}).
+
+A: Use the answer to the previous question to find the index of the minimum element, which is the rotation amount of the array. Then use regular binary search, except whenever you index the midpoint in the array, offset it by that rotation amount and modulo it by the array length. Time $O(\log n)$, space $O(1)$.
+
+\subsection{\href{https://leetcode.com/problems/reorder-list}{Reorder List}}
+
+Q: Given the head of a singly linked-list ($L_0 \rightarrow L_1 \rightarrow ... \rightarrow L_{n-1} \rightarrow L_n$), reorder the list to $L_0 \rightarrow L_n \rightarrow L_1 \rightarrow L_{n-1} \rightarrow L_2 \rightarrow L_{n-2} \rightarrow ...$.
+
+A: Find the middle node of the linked list, reverse the second part of the list (i.e. starting from the middle node), then merge the two halves. Note that you need slightly different logic for an even number of nodes than for an uneven number of nodes. Time $O(n)$, space $O(1)$.
+
+\subsection{\href{https://leetcode.com/problems/remove-nth-node-from-end-of-list}{Remove Nth Node From End of List}}
+
+Q: Given the head of a linked list, remove the $n$th-to-last node from the list and return its head, using only one pass over the list.
+
+A: Iterate a pointer $n+1$ times, then start iterating a second pointer (so you essentially have a sliding window of size $n+1$), and when the first pointer is at the end, you can rewire the node at the second pointer to bypass the $n$th node. Time $O(n)$, space $O(1)$.
+
+\subsection{\href{https://leetcode.com/problems/remove-nth-node-from-end-of-list}{Kth Smallest Element in a BST}}
+
+Q: Given the root of a binary search tree, and an integer $k$, return the $k$th smallest value (1-indexed) of all the values of the nodes in the tree.
+
+A: Inorder DFS (recursive) traversal of a BST is an array sorted in ascending order.
+
+\subsection{\href{https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal}{Construct Binary Tree from Preorder and Inorder Traversal}}
+
+Q: Given two integer arrays \mintinline{java}{preorder} and \mintinline{java}{inorder}, construct and return the binary tree. The node values are unique, and both traversal arrays contain the same values, just in a different order.
+
+A: Actually hard. The key is understanding how the two arrays are structured:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{traversal_array_structure.png}
+\end{figure}
+
+The parent node is always to the left of all its children in \mintinline{java}{preorder}, so we initialize a global pointer pointing at the first position in \mintinline{java}{preorder}, which is only ever incremented. We also initialize a hash map mapping all (unique) node values to their index in \mintinline{java}{inorder}. We then recursively build the tree, maintaining left and right pointers into \mintinline{java}{inorder}. Specifically, at every node, the node value is at the pointer into \mintinline{java}{preorder}, so load that and increment the pointer. Use the hash map to find the index of the node value in \mintinline{java}{inorder}, then recurse into the left and right portions of \mintinline{java}{inorder}. You stop recursing whenever the left pointer is past the right pointer.
+
+\subsection{\href{https://leetcode.com/problems/binary-tree-maximum-path-sum}{Binary Tree Maximum Path Sum}}
+
+Q: Given the root of a binary tree, return the maximum path sum of any non-empty path. The path can be any connected sequence of nodes. Node values can be negative.
+
+A: Actually medium. Recurse from the root. At every node you \mintinline{python}{max} a global variable containing the maximum with the node value and any path sum you'd get if it connected its childdren along the path. You return a slightly different value, namely the maximum path sum if the node is the end/beginning of a path. Time $O(n)$, space $O(n)$ (because of the call stack).
+
+\begin{minted}{python}
+maxPath = -float("inf")
+gainFromSubtree(root)
+return maxPath
+
+def gainFromSubtree(node): # Post order traversal. Return the max sum for a path starting at the root of subtree
+    if not node:
+        return 0
+
+    gainFromLeft = max(gainFromSubtree(node.left), 0) # Use max, because if gain is negative we can ignore it
+    gainFromRight = max(gainFromSubtree(node.right), 0) # Idem
+    maxPath = max(maxPath, gainFromLeft + gainFromRight + node.val)
+    return max(gainFromLeft + node.val, gainFromRight + node.val)
+\end{minted}
+
+\subsection{\href{https://leetcode.com/problems/find-median-from-data-stream}{Find Median from Data Stream}}
+
+Q: Implement the \mintinline{java}{MedianFinder} class, with a constructor, a method that adds the given integer to the data structure, and a method that returns the median of all elements so far, where the median is the average of the two middle elements if the number of elements is even.
+
+A: In the constructor, initialize two priority queues, one is a max heap for the numbers smaller than the median, and the other is a min heap for the larger numbers. You add a number by comparing it to the median and putting it in the right queue ($O(\log n)$, after which you check whether one of the queues is two larger than the other, in which case you rebalance by putting the highest priority element from the larger in the smaller. Calculating the median is then simply done by peeking and averaging the highest priority elements from both in case they're the same size, or you peek from the largest queue ($O(1)$).
+
+\subsection{\href{https://leetcode.com/problems/combination-sum}{Combination Sum}}
+
+Q: Given an array of distinct integers candidates and a target integer target, return a list of all unique combinations (where the order doesn't matter) of candidates where the chosen numbers sum to target. The same integers candidate may be chosen an unlimited number of times.
+
+A: Starting at the first element with an empty list, at every index you recurse twice: once while not taking the element and moving to the next element, and once taking the element and staying at the same index. Keep track of the sum of elements in the list; and add the list to the list of lists when the current sum equals the target, and abandon/return when it is greater or equal to the target.
+
+\subsection{\href{https://leetcode.com/problems/word-search}{Word Search}}
+
+Q: Given an $m \times n$ grid of characters board and a string \mintinline{java}{word}, return true if \mintinline{java}{word} exists in the grid. The word can be constructed from letters of horizontally or vertically neighbouring cells. The same letter cell may not be used more than once.
+
+A: This really is as straightforward as your first intuition: loop through the cells, and per cell recursively search in all valid, non-visited directions, backtracking whenever the next character doesn't appear in the word.
+
+\subsection{\href{https://leetcode.com/problems/word-search-ii}{Word Search II}}
+
+Q: Same as Word Search, but instead of one word you get a list of strings words and must return all words on the board.
+
+A: Slightly similar to the solution to Word Search, but using a trie for backtracking. Traverse the trie while recursively searching the board.
+
+\subsection{\href{https://leetcode.com/problems/design-add-and-search-words-data-structure}{Design Add and Search Words Data Structure}}
+
+Q: Design a data structure that supports \mintinline{java}{add(word)} and \mintinline{java}{search(word)}. \mintinline{java}{search(word)} returns \mintinline{java}{true} if there is any string in the data structure that matches \mintinline{java}{word} or \mintinline{java}{false} otherwise, where \mintinline{java}{word} may contain dots which can be matched with any letter.
+
+A: Implement a trie. In \mintinline{java}{search(word)}, when you encounter a dot, you loop through all 26 subtries and recurse, returning true if any one returns true.
+
+\subsection{\href{https://leetcode.com/problems/number-of-islands}{Number of Islands}}
+
+Q: Given an $m \times n$ grid which represents a map of \mintinline{java}{1}s (land) and \mintinline{java}{0}s (water), return the number of islands, where an island is connected horizontally or vertically and is surrounded by water or the grid edge.
+
+A: Loop through all cells in the grid, and for each unvisited \mintinline{java}{1}, call a recursive function that explores the island in all directions and marks it all as visited. The recursive function is similar to the one in Word Search. You can also simply set land from \mintinline{java}{1} to \mintinline{java}{0} to mark it as visited. Time $O(mn)$, space $O(mn)$. A BFS or Union-Find solution is also possible.
+
+\subsection{\href{https://leetcode.com/problems/clone-graph}{Clone Graph}}
+
+Q: Given a reference of a node in a connected undirected graph, in which each node contains a unique integer value and a list of its neighbors, return a deep copy (clone) of the graph.
+
+A: Create a hash map for storing visited nodes, in which the node's value is mapped to a reference of the cloned node. Then, clone the given node and recursively clone it's neighbors, returning a clone from the set early if the neighbor has already been copied before. Time $O(nm)$, space $O(n)$ (only the visited hash map).
+
+\subsection{\href{https://leetcode.com/problems/pacific-atlantic-water-flow}{Pacific Atlantic Water Flow}}
+
+Q: There is an $m \times n$ rectangular island that borders both the Pacific Ocean at the top and left, and Atlantic Ocean at the right and bottom. You are given an$m \times n$ integer matrix heights. Rain water can flow to neighboring cells directly north, south, east, and west if the neighboring cell's height is less than or equal to the current cell's height. Water can flow from any cell adjacent to an ocean into the ocean (let's call those "beach cells").\\
+Return a 2D list of grid coordinates of cells from where water can flow to both the Pacific and Atlantic oceans.
+
+A: For each ocean, you need to loop through the beach cells, and for each you start a recursive (depth-first) search, marking all cells that are equal or higher. (You can also do breath-first search with a queue; then you start by enqueueing all the beach cells.) (Note that linearly looping through the cells and checking their top and left neighbours (or right and bottom neighbours for the Atlantic part) doesn't work, since you're only considering two directions.) Then it's just a matter of looping through all cells and adding them to the list if it's reachable from both oceans. Time $O(mn)$, space $O(mn)$.
+
+\subsection{\href{https://leetcode.com/problems/course-schedule}{Course Schedule}}
+
+Q: Given a total number of courses (the courses themselves are integer-labeled \mintinline{java}{0} through \mintinline{java}{numCourses-1}) and a 2D array of prerequisites, where each element \mintinline{java}{[a, b]} indicates that you must take course \mintinline{java}{b} first if you want to take course \mintinline{java}{a}, return a boolean indicating whether you can finish all courses.
+
+A: First loop through the prerequisites and create an adjacency list of course dependencies; a hash map mapping course number to it's outgoing neighbours (the courses you "unlock" by taking that course). Then, run DFS on every course for cycle detection; returning \mintinline{java}{false} when you detect a cycle. Note that you need to maintain a recursion stack hash set specific to each DFS run (for the cycle detection), but also a hash set to store DFS-processed nodes for early returns in future DFS runs (in order to avoid quadratic time complexity). The only difference between them is that you pop nodes from the recursion stack afterwards, while you keep them in the processed set. Time $O(m+n)$, space $O(m+n)$, where $m$ is the number of prerequisites/adjacency links and $n$ the number of nodes/courses.\\
+Alternatively, you can also use Kahn's algorithm (see Section \ref{kahns_algorithm}).
+
+\subsection{\href{https://leetcode.com/problems/graph-valid-tree}{Graph Valid Tree}}
+
+Q: You are given an integer $n$ -- the number of nodes in an undirected graph, where each node is labeled from $0$ to $n - 1$ -- and a 2D list of edges, where each edge \mintinline{java}{[a, b]} is undirected. Return a boolean indicating whether the edges of the given graph make up a valid tree.
+
+A: There are multiple solutions. We'll discuss three from good to better.\\
+You can use either DFS or BFS and check whether the visited set contains exactly $n$ nodes. You'd also need to do cycle detection by returning \mintinline{java}{false} if you encounter a visited node. Because it's an undirected graph, make sure that you don't detect "trivial cycles", because edges go in two directions. Time $O(n+m)$, space $O(n+m)$, where $m$ is the number of edges.\\
+Alternatively, you can first do a check whether the given list of edges is exactly of size $n-1$ (a necessary property of valid trees) and then to check whether it is fully connected using any traversal algorithm. Time $O(n)$, space $O(n)$, because you start by verifying whether $m=n-1$.\\
+Another way is union-find (see Section \ref{union_find}), using the optimizations of rank tracking and path compression. Time $O(n*\alpha(n))$, space $O(n)$, where $\alpha$ is the inverse Ackermann function and $\alpha(n)$ can in theory never go higher than $4$ and in practice is $1$ (so you could treat it as a small constant and just say $O(n)$). In practice, this is better than the previous two solutions, because this doesn't need to convert the input to an adjacency list (which is treated as a constant in big-O notation, so it's abstracted away).
+
+\subsection{\href{https://leetcode.com/problems/alien-dictionary}{Alien Dictionary}}
+
+Q: You are given a list of strings; a dictionary of words from an alien language's dictionary, which uses the lowercase English alphabet. Assuming that the strings are sorted lexicographically by the rules of this new language, return a string of the unique letters in the new alien language sorted in lexicographically increasing order by the new language's rules. There can be multiple valid orderings. If the given arrangement of strings cannot correspond to any order of letters, return \mintinline{java}{""}.
+
+A: Create a hash set \mintinline{java}{leafs} and put all characters in it. Build a directed adjacency list of character precedence (mapping chars to sets of chars) by looping through the words; for each you compare that word to the one before it and determine the first index at which the characters differ between the words. Link that index's character from the first word to that of the second, and remove the second word's character from the set of leafs. If a word is a prefix in the words preceding it, return \mintinline{java}{""}, since those two words aren't lexicographically sorted. Then, use Kahn's algorithm (see Section \ref{kahns_algorithm}) to topologically sort the characters. If the resulting ordered string isn't equal to the number of unique characters in the words, return \mintinline{java}{""}, else return the ordered string. Time $O(c)$, space $O(a)$, where $c$ is the total number of characters in all the words in the dictionary and $a$ is the number of unique characters in those words. $c$ will always be greater than $a$ and the number of dependency relations between the characters.
+
 \subsection{\href{https://leetcode.com/problems/house-robber}{House Robber}}
 
 Q: Given an integer array representing amounts of money stashed in houses along a street. Return the maximum amount of money you can rob without robbing two adjacent houses. The values are nonnegative.
 
-A: This is an example of bottom-up 1D dynamic programming where we need to only memorize the last two answers as mentioned in Section \ref{dynamic_programming}, so we don't need a full array. Loop front-to-back through the array, at every position updating \mintinline{java}{maxLastIncluded = nums[i] + maxLastExcluded} and \mintinline{java}{maxLastExcluded = Math.max(maxLastIncluded, maxLastExcluded)} (and using a temporary variable, because you're sort of swapping numbers). Time $O(n)$, space $O(1)$. A very concise Python implementation:
+A: Bottom-up 1D dynamic programming. We need to only memorize the last two answers as mentioned in Section \ref{dynamic_programming}, so we don't need a full array. Loop front-to-back through the array, at every position updating \mintinline{java}{maxLastIncluded = nums[i] + maxLastExcluded} and \mintinline{java}{maxLastExcluded = Math.max(maxLastIncluded, maxLastExcluded)} (and using a temporary variable, because you're sort of swapping numbers). Time $O(n)$, space $O(1)$. A very concise Python implementation:
 
 \begin{minted}{python}
 def rob(nums):
@@ -803,55 +962,181 @@ Q: Same as House Robber, but instead of maximizing the total reward, minimize th
 
 A: In Section \ref{binary_search}, we said that \textit{problems that require minimizing the maximum or maximizing the minimum often suggest a binary search approach on the range of possible values for this maximum or minimum, respectively}. Demarcate the search space of the possible values for the maximum loot by taking the minimum and maximum of all element values in the array. Then, use binary search to determine the minimum possible maximum loot of any burglary spree involving at least $k$ houses. At every iteration, you take the middle of the current search space and check whether that value can be the maximum of $k$ non-contiguous houses. This check is done by iterating through the list of house values and greedily selecting houses that have at most the value to be checked (of course skipping the next house each time we choose one). Once we rob $k$ houses, it means the current middle value is a valid maximum, in which case we move the binary search range to the left; else we move it to the right. Time $O(n \log m)$, where $m$ is the size of the search space, space $O(1)$.
 
-\subsection{\href{https://leetcode.com/problems/longest-substring-without-repeating-characters}{Longest Substring Without Repeating Characters}}
+\subsection{\href{https://leetcode.com/problems/longest-palindromic-substring}{Longest Palindromic Substring}}
 
-Q: Find the longest \emph{substring} (i.e. contiguous characters) without duplicate characters in a given string.
+Q: Given a string, return the longest palindromic substring (i.e. contiguous characters).
 
-A: A two-pointers sliding window, where the right pointer keeps moving, and max'ing the length of the current window, until it reaches a character which is already in the set of characters currently in the window, at which point the left pointer has to be increased and those characters removed until the right pointer's character is no longer in the set. Be sure to include the character at index 0 into the set during initializiation, and to take the substring length as \mintinline{java}{right - left + 1}.
+A: Solutions from good to better:
 
-\subsection{\href{https://leetcode.com/problems/longest-repeating-character-replacement}{Longest Repeating Character Replacement}}
+\begin{itemize}
+    \item \textit{Bottom-up 2D dynamic programming}. You can create a $n \times n$ table of booleans, where \mintinline{java}{dp[i][j]} indicates whether the substring with inclusive bounds \mintinline{java}{i}, \mintinline{java}{j} is a palindrome. We initialize \mintinline{java}{dp[i][i] = true} for the substrings of length 1, and then \mintinline{java}{dp[i][i + 1] = (s[i] == s[i + 1])} for the substrings of length 2. Then iterate over \mintinline{java}{i}, \mintinline{java}{j} pairs with increasingly larger difference between them, setting their entry to \mintinline{java}{s[i] == s[j] && dp[i + 1][j - 1]}. Return the substring of the last such pair. Time $O(n^2)$, space $O(n^2)$.
+    \item \textit{Simple nested loop}. A simpler and in practice faster alternative is to simply loop over all the characters and expand from each character as the center of a potential palindrome. Also do this for the palindromes of even length. Returns the largest palindrome found. Time $O(n)$, space $O(1)$, so it's space complexity is superior than the DP solution, but in practice it's also faster, because the DP solutions always checks $n^2$ pairs, while this solutions abandons early.
+    \item \textit{Manacher's algorithm}. Out-of-scope. Time $O(n)$.
+\end{itemize}
 
-Q: Find the longest \emph{substring} (i.e. contiguous characters) of the same uppercase characters in a string of uppercase characters, in which you can convert at most $k$ characters to another character (i.e., you have $k$ wildcards).
+\subsection{\href{https://leetcode.com/problems/decode-ways}{Decode Ways}}
 
-A: A two-pointers sliding window, where the right pointer keeps moving, and max'ing the length of the current window. At every iteration, a hashmap of character frequencies currently in the window\footnote{In Java, the map can be a simple \mintinline{java}{int[26]} indexed with \mintinline{java}{s.charAt(q) - 'A'}} is updated by incrementing the character at the right pointer. Also, \mintinline{java}{maxFrequency} keeps track of the maximum of any such frequency of any character in any window seen so far, and we update that as well. If \mintinline{java}{right - left + 1 - maxFrequency <= k} the window is an invalid substring, in which case the left pointer is incremented (and the corresponding frequency decremented); otherwise, the loop continues. Note that both the window size (\mintinline{java}{right - left + 1}) as well as \mintinline{java}{maxFrequency} never decreases, which doesn't matter, because we're only interested in larger windows.
+Q: Given a secret message encoded as a string of numbers, in which \mintinline{java}{1} maps to \mintinline{java}{A}, \mintinline{java}{2} maps to \mintinline{java}{B}, ..., and \mintinline{java}{26} maps to \mintinline{java}{Z}, return the number of ways/different strings in which you can decode it. If the entire string cannot be decoded in any valid way, return \mintinline{java}{0}. Note that \mintinline{java}{0}s are only valid in \mintinline{java}{10}s and \mintinline{java}{20}s; else it can't be decoded.
 
-\subsection{\href{https://leetcode.com/problems/find-minimum-in-rotated-sorted-array}{Find Minimum in Rotated Sorted Array}}
+A: Solutions:
 
-Q: Given a sorted but rotated array (e.g., \mintinline{java}{[4,5,6,7,0,1,2]} is rotated 4 times), return the minimum element of this array.
+\begin{itemize}
+    \item \textit{Top-down 1D dynamic programming}. You create a hash map for storing strings mapped to the number of ways to decode them. At every recursion, you first check for the empty string (return \mintinline{java}{1}), whether the first character is \mintinline{java}{0} (return \mintinline{java}{0}), and whether the substring is in the map (return it). Then, recurse with the substring without the first character, and -- if the first two characters are a number under 27 -- add a recursion with the substring without the first two characters to it. Store and return the result. Time $O(n)$, space $O(n)$, where $n$ is the length if the input string.
+    \item \textit{Bottom-up 1D dynamic programming}. Create an array with size one larger than the string, where index \mintinline{java}{i} of the array is used to store the number of decode ways for the substring from index \mintinline{java}{0} to index \mintinline{java}{i-1}. Return \mintinline{java}{0} if the first character is \mintinline{java}{0} or the string is empty. Initialize the first element as \mintinline{java}{1} and the second as \mintinline{java}{s[0] == '0' ? 0 : 1}. Then, iterate from \mintinline{java}{2} until the and of the array; the value at \mintinline{java}{i} is the sum of the element at \mintinline{java}{i-1} (if a single digit decode is possible, i.e. \mintinline{java}{s[i - 1] != '0'}) and \mintinline{java}{i-2} (if a double digit decode is possible, i.e. the first two characters make a number between 10 and 26). Return the last element of the array. Time $O(n)$, space $O(n)$, though you can have $O(1)$ space by only using the previous two elements.
+\end{itemize}
 
-A: An adaptation of binary search. While \mintinline{java}{nums[left] > nums[right]}, we continue searching in the half where the "breaking point" is (where the original last/max elements is adjacent to the original first/min element), after which we return the element at the left pointer. Time $O(\log n)$, space $O(1)$. Code:
+\subsection{\href{https://leetcode.com/problems/coin-change}{Coin Change}}
+
+Q: You are given an integer array representing coins of different denominations/values and an integer representing a total amount of money. Return the fewest number of coins that you need to make up that amount (assuming you have infinite of each coin type), or \mintinline{java}{-1} if it's not possible.
+
+A: Solutions:
+
+\begin{itemize}
+    \item \textit{Top-down 1D dynamic programming}. Create an integer array of size the total amount plus one for the memoization, where \mintinline{java}{dp[i]} is supposed to store the minimum number of coins needed for amount \mintinline{java}{i}. Loop through all the coin types, and for each recurse with the amount minus the coin value. Return the minimum of all these recursions plus one; this is the minimum number of coins needed for the current amount. Cache and early return calculated minima. Time $O(nc)$, space $O(n)$, where $n$ is the total amount and $c$ is the number of coin types.
+    \item \textit{Bottom-up 1D dynamic programming}. Create an integer array of size the total amount plus one for the memoization, where \mintinline{java}{dp[i]} is supposed to store the minimum number of coins needed for amount \mintinline{java}{i}. Loop from 1 to the total amount, and per amount, loop through the coins from largest to smallest and store at \mintinline{java}{dp[i]} the minimum of \mintinline{java}{1 + dp[i - coin]} of these coins, or \mintinline{java}{-1} if none of the coins fit the amount or none of the coin subtractions lead to nonnegative coin amounts. Note that you can't simply take the biggest fitting coin, because that would be greedy and in this problem may not be optimal; a smaller coin may lead to a smaller number of coins. Time $O(nc)$, space $O(n)$, where $n$ is the total amount and $c$ is the number of coin types.
+    \item 
+\end{itemize}
+
+\subsection{\href{https://leetcode.com/problems/maximum-subarray}{Maximum Subarray}}
+
+Q: Given an integer array nums, find the subarray (i.e. contiguous) with the largest sum, and return that sum.
+
+A: \textit{Kadane's algorithm}. Loop through the array while maintaining a current sum and a maximum sum, at each element you first take the max of the current sum and $0$ (because as soon as the sum is negative you can throw it away and start over), then add the current element to the sum and take the maximum of that and the maximum found so far. Return the maximum sum. Time $O(n)$, space $O(1)$.
+
+Q follow-up: Use a divide-and-conquer algorithm to solve the problem (even though it has a worse time and space complexity).
 
 \begin{minted}{python}
-def find_min(nums):
-    p, q = 0, len(nums) - 1
-    while nums[p] > nums[q]:
-        h = (p + q) // 2
-        if nums[h] >= nums[q]:
-            p = h + 1
-        else:
-            q = h
-    return nums[p]
+max = -infinity # Set to 0 if empty subarrays are allowed
+sum = 0
+for x in numbers:
+	sum = max(x, sum + x) # Set to max(0, sum + x) if empty subarrays are allowed
+	max = max(max, sum)
+return max
 \end{minted}
 
-\subsection{\href{https://leetcode.com/problems/search-in-rotated-sorted-array}{Search in Rotated Sorted Array}}
+A follow-up: Write a recursive function that takes the left and right inclusive bounds. Recurse in the left and right halves and get the sums of optimal subarrays contained in both halves. Then, loop from the middle to the start, keep summing and maxing the sum with a maximum. Do the same from the middle to the end of the array, and sum the two. Return the max of the left half, the right half, and the max containing the middle.
 
-Q: Given a sorted but rotated array (e.g., \mintinline{java}{[4,5,6,7,0,1,2]} is rotated 4 times), return the index of \mintinline{java}{target} (or \mintinline{java}{-1}).
+\subsection{\href{https://leetcode.com/problems/maximum-product-subarray}{Maximum Product Subarray}}
 
-A: Use the answer to the previous question to find the index of the minimum element, which is the rotation amount of the array. Then use regular binary search, except whenever you index the midpoint in the array, offset it by that rotation amount and modulo it by the array length. Time $O(\log n)$, space $O(1)$.
+Q: Given an integer array nums, find a subarray (i.e. contiguous) with the largest product, and return that product.
 
-\subsection{\href{https://leetcode.com/problems/reorder-list}{Reorder List}}
+A:
 
-Q: Given the head of a singly linked-list ($L_0 \rightarrow L_1 \rightarrow ... \rightarrow L_{n-1} \rightarrow L_n$), reorder the list to $L_0 \rightarrow L_n \rightarrow L_1 \rightarrow L_{n-1} \rightarrow L_2 \rightarrow L_{n-2} \rightarrow ...$.
+\begin{itemize}
+    \item \textit{Dynamic programming}. Loop through the array while maintaining a global maximum, a current maximum, and a current minimum value. At each element, the current maximum is updated with the max of: the current element, the current maximum times the current element, or the current minimum times the current element. The current minimum is updated with the minimum of these same three values. At the end of each loop, update the global maximum by maxing it with the current maximum, and return the global maximum after the loop. In this way, 0s are handled correctly because they "reset" the current maximum and minimum, every pair of negative numbers is handled correctly because the current minimum retains the product of the elements between them, and every odd number of negatives is handled correctly because the current maximum is reset to the element after it. Time $O(n)$, space $O(1)$.
+    \item \textit{Emiel's algorithm}. Genius theoretical computer scientist Emiel Bos has the following interpretation of the problem. You keep a global maximum and a current product and loop through the array, maxing the current product with the global maximum. 0s break up the array as if the subsequent element were the start of the array; just reset the current product and continue. Apart from 0s, there are negative numbers. Zero or an even number of negative numbers means the maximum product subarray is the whole array; the current product will capture it's max. If there is an uneven number of negatives, then the maximum product subarray either starts after the first such negative (and ends at the array end), or ends before the last such negative (and starts at the array start). If the subarray is the latter, the current maximum product will capture it. For capturing the former, you will need to maintain a separate product that starts multiplying after the first negative number (also the first after a 0), and keep maxing that with the global maximum. Time $O(n)$, space $O(1)$.
+\end{itemize}
 
-A: Find the middle node of the linked list, reverse the second part of the list (i.e. starting from the middle node), then merge the two halves. Note that you need slightly different logic for an even number of nodes than for an uneven number of nodes. Time $O(n)$, space $O(1)$.
+\subsection{\href{https://leetcode.com/problems/word-break}{Word Break}}
 
-\subsection{\href{https://leetcode.com/problems/remove-nth-node-from-end-of-list}{Remove Nth Node From End of List}}
+Q: Given a string and a dictionary of words/strings (both all lowercase English letters), return a boolean indicating whether the string can be segmented into one or more dictionary words. The same word in the dictionary may be reused multiple times in the segmentation.
 
-Q: Given the head of a linked list, remove the $n$th-to-last node from the list and return its head, using only one pass over the list.
+A: Multiple solutions are possible, but I only bothered to write out one:
 
-A: Iterate a pointer $n+1$ times, then start iterating a second pointer (so you essentially have a sliding window of size $n+1$), and when the first pointer is at the end, you can rewire the node at the second pointer to bypass the $n$th node. Time $O(n)$, space $O(1)$.
+\begin{itemize}
+    \item \textit{Top-down 1D dynamic programming}.
+    \item \textit{Bottom-up 1D dynamic programming}. You create a boolean array with the same size as the string length. \mintinline{java}{dp[i]} indicates whether the string up to character \mintinline{java}{i} can be made up of dictionary words. Loop through the array. At each element \mintinline{java}{i} you loop through the dictionary of words, until you find a \mintinline{java}{word} which is a suffix of the string up until character \mintinline{java}{i} and \mintinline{java}{dp[i-word.length]}, in which case \mintinline{java}{dp[i]} is true, else it's false. Return the last boolean in the array. Time $O(nmk)$, space $O(n)$, where $n$ is the length of the string, $m$ is the number of dictionary words, and $k$ is the average length of dictionary words.
+    \item \textit{Emiel's DP adaption}. Genius theoretical computer scientist Emiel Bos proposes an adaptation of the above by putting all dictionary words in a set for constant-time lookup, determining the length $l$ of the longest dictionary word (which is $20$ in the LeetCode exercise, so it could be considered a constant), and instead of looping through all the dictionary words when finding a suffix, to only loop through the previous $l$ characters of the string and checking the set. Time $O(m+nl)$ and space $O(n+m)$.
+    \item \textit{Trie implementation}.
+\end{itemize}
 
+\subsection{\href{https://leetcode.com/problems/longest-increasing-subsequence}{Longest Increasing Subsequence}}
 
+Q: Actually hard.\footnote{Except the first solution, which should be good enough for an interview.} Given an integer array, return the length of the longest strictly increasing subsequence (i.e. not contiguous).
 
+A: Solutions from good to better:
+
+\begin{itemize}
+    \item \textit{Bottom-up 1D dynamic programming.} Initialize an array with length equal to the input array and all elements equal to 1. \mintinline{java}{dp[i]} should represent the length of the longest increasing subsequence that ends with the \mintinline{java}{i}th number. Loop through the array, at every position you do a nested loop up until that position to find the element with the largest subsequence of which the corresponding number is smaller than the current one. Time $O(n^2)$, space $O(n)$.
+    \item \textit{Building a subsequence.} Loop through the input array while building up a strictly increasing subsequence. At each number, if it is greater than the largest number in the subsequence, add it. Otherwise, perform a linear smallest-to-largest scan through the subsequence and replace the first element that is greater than the number. This opens the door for elements that are greater than the inserted number but less than the replaced number. This algorithm does not always generate a valid subsequence of the input, but the length of the subsequence will be correct, because the length only changes when a new element is larger than the largest element in the subsequence, and this largest value will only drop when you encounter a number that is smaller only to this last number in the subsequence. Replacing earlier elements in the subsequence will increase the chance of that happening. Time $O(n^2)$, space $O(n)$.
+    \item \textit{Building a subsequence with binary search.} Instead of a linear scan, use binary search to find the element-to-replace in the above solution. Time $O(n \log n)$, space $O(n)$.
+\end{itemize}
+
+\subsection{\href{https://leetcode.com/problems/unique-paths}{Unique Paths}}
+
+Q: Actually easy (for the first solution; second solution is impossible). Given two integers $m$ and $n$, return the number of possible unique paths from the top-left corner of a $m \times n$ grid to the bottom-right corner when you can only move right and down.
+
+A:
+\begin{itemize}
+    \item \textit{Bottom-up 2D dynamic programming.} Initialize a two-dimensional $m \times n$ integer array with \mintinline{java}{1}s in the first row and the first column, where \mintinline{java}{dp[i][j]} indicates the number of unique paths to those coordinates, loop through all the other cells and set \mintinline{java}{d[i][j] = d[i-1][j] + d[i][j-1]}. Return \mintinline{java}{dp[m-1][n-1]}. Time $O(nm)$, space $O(nm)$.
+    \item \textit{Math}. There are $h+v$ moves to do from start to finish, $h=m-1$ horizontal moves and $v=n-1$ vertical ones. One could choose when to move to the right (to define $h$) and that will fix vertical ones, or one could choose when to move down (to define $v$) and that will fix horizontal ones.
+    \begin{equation}
+        \binom{h}{h+v} = \binom{v}{h+v} = \frac{(h+v)!}{h!v!} = \frac{(m+n-2)!}{(m-1)!(n-1)!}
+    \end{equation}
+    The best known algorithm to compute factorial function is by Peter Borwein. The idea is to express the factorial as a product of prime powers. Time $O((m+n)(\log(m+n)\log\log(m+n))^2)$, space $O(1)$.
+\end{itemize}
+
+\subsection{Longest Common Substring}
+
+Q: Determine the longest common \emph{substring} (i.e. contiguous characters) between two given strings.
+
+A: \textit{Bottom-up 2D dynamic programming}. Initialize a 2D array with size the letters of the two words (so you can imagine the letters of the two words along the axes of the grid). Initialize the grid with all-zeroes, then loop (row-wise or column-wise, doesn't matter) and only change the value of a cell if:
+
+\begin{minted}{python}
+if word_a[i] == word_b[j]:
+    cell[i][j] = cell[i-1][j-1] + 1
+\end{minted}
+
+For most dynamic programming problems, the answer is in the last cell, but the solution here is the largest number in the grid, which isn't necessarily in the last cell. Time $O(nm)$, space $O(nm)$, where $n$ and $m$ are the length of the two respective strings.
+
+\subsection{\href{https://leetcode.com/problems/longest-common-subsequence}{Longest Common Subsequence}}
+
+Q: Determine the the longest common \emph{subsequence} (doesn't need to be contiguous) between two given strings.
+
+A: Done similarly to longest common substring, but you set each cell as:
+
+\begin{minted}{python}
+if word_a[i] == word_b[j]:
+    cell[i][j] = cell[i-1][j-1] + 1 # Same as longest common substring
+else:
+    cell[i][j] = max(cell[i-1][j], cell[i][j-1])
+\end{minted}
+
+The answer is in the last cell. Time $O(nm)$, space $O(nm)$, where $n$ and $m$ are the length of the two respective strings.
+
+\subsection{\href{https://leetcode.com/problems/jump-game}{Jump Game}}
+
+Q: Given an integer array where each element represents the maximum jump length at that position, return \mintinline{java}{true} if you can reach the last index from the first index, or \mintinline{java}{false} otherwise.
+
+A:
+
+\begin{itemize}
+    \item \textit{Bottom-up 1D dynamic programming}. Initialize a boolean array of the same length, where \mintinline{java}{dp[i]} should indicate whether the end is reachable from that index. Set the last element to \mintinline{java}{true}. Loop back-to-front, at each element scanning the elements in that index's jump window for a \mintinline{java}{true}; if so, set it to \mintinline{java}{true}. Return \mintinline{java}{dp[0]}. Time $O(n^2)$, space $O(n)$.
+    \item \textit{Greedy.} Looping through the array while maintaining the maximum index you can reach so far, you only have to return \mintinline{java}{false} if you encounter a \mintinline{java}{0} and the maximum index is at or before this \mintinline{java}{0}'s position. Time $O(n)$, space $O(1)$.
+\end{itemize}
+
+\subsection{\href{https://leetcode.com/problems/merge-intervals}{Merge Intervals}}
+
+Q: Given a 2D array of intervals (where \mintinline{java}{intervals[i] = [start, end]}), merge all overlapping intervals and return an array of the non-overlapping intervals.
+
+A: Sort the input intervals by ascending start time. Copy them to an output array by looping through them, and if an interval's start time is less than or equal to the output array's last interval's end time (i.e. they're overlapping), merge the two and replace the last interval with the merging. Time $O(n \log n)$, space $O(\log n)$, both bottlenecked by the sorting.
+
+\subsection{\href{https://leetcode.com/problems/non-overlapping-intervals}{Non-overlapping Intervals}}
+
+Q: Given a 2D array of intervals (where \mintinline{java}{intervals[i] = [start, end]}), return the minimum number of intervals you need to remove to make the rest of the intervals non-overlapping. Intervals which only touch at a point are considered non-overlapping.
+
+A: \textit{Greedy.} Sort the input intervals by ascending end time. Maintain a variable for the count and a variable for the latest end time. Loop through the intervals: if an interval's start time is less than the latest end time (i.e. there's overlap), increase the counter (and don't store the interval's end time, because that's later and we want to keep intervals with earlier start times, so we're discarding it); else, store it's end time. Time $O(n \log n)$, space $O(\log n)$, both bottlenecked by the sorting.
+
+\subsection{\href{https://leetcode.com/problems/meeting-rooms-ii}{Meeting Rooms II}}
+
+Q: Given a 2D array of meeting time intervals (where \mintinline{java}{intervals[i] = [start, end]}), return the minimum number of conference rooms required.
+
+A:
+
+\begin{itemize}
+    \item \textit{Priority queues}. Sort the input intervals by ascending start time. Create a priority queue with a min heap that will store end times. Loop through the intervals: add the end time of the interval to the priority queue, and pop the earliest end time in the priority queue if the start time of the current interval is later than or equal to it (intuitively, in that case a meeting room has become available for the current meeting, so the number of occupied meeting rooms doesn't increase). Return the size of the priority queue after looping. Time $O(n \log n)$, space $O(n)$.
+    \item As a slightly different implementation of the above solution, you can also separate the start and end times into their own arrays, sort those individually, initialize two pointers at the beginning of both arrays, loop with the "start time" pointer, and increase the "end time" pointer only when if the pointed-to start time is later than or equal to the pointer-to end time. Return the difference between the start time pointer and the end time pointer after looping. Time $O(n \log n)$, space $O(n)$.
+\end{itemize}
+
+\subsection{Useful Java statements}
+
+\begin{itemize}
+    \item Sorting an array in-place: \mintinline{java}{Arrays.sort(arr)}. For more advanced datatypes and comparisons, you can supply a comparator, e.g. \mintinline{java}{Arrays.sort(strings, (sa,sb) -> Integer.compare(sa.length(), sb.length()))}.
+    \item Getting a \mintinline{java}{String} representation of an array (e.g. for printing): \mintinline{java}{Arrays.toString(arr)}. For a multidimensional array, use \mintinline{java}{Arrays.deepToString(arr)}.
+    \item Converting a \mintinline{java}{List<T>} to a \mintinline{java}{T[]} array: \mintinline{java}{list.toArray(new T[list.size()])}. You can even convert a \mintinline{java}{List<T[]>} to a 2D \mintinline{java}{T[][]} array: \mintinline{java}{list.toArray(new T[list.size()][])}.
+    \item Converting a lowercase English \mintinline{java}{char} to an \mintinline{java}{int}: \mintinline{java}{c - 'a'}.
+    \item Creating a priority queue with a min heap: \textbf{new PriorityQueue<>()}. For a max heap: \mintinline{java}{new PriorityQueue<>(Comparator .reverseOrder())}. Supports \mintinline{java}{add()}, \mintinline{java}{remove()} and \mintinline{java}{peek()}.
+    \item Creating a double-ended queue: \mintinline{java}{new ArrayDeque<E>}. Use as a (LIFO) stack with \mintinline{java}{push()}/\mintinline{java}{addFirst()} and \mintinline{java}{pop()}/\mintinline{java}{removeFirst()}/\mintinline{java}{remove()} for adding/removing on top/at the front, or as a (FIFO) queue with \mintinline{java}{add()}/\mintinline{java}{addLast()} (at the end) and \mintinline{java}{remove()}/\mintinline{java}{removeFirst()}/\mintinline{java}{pop()} (at the front).
+\end{itemize}
 
 \end{document}

@@ -42,7 +42,7 @@ Kubernetes\\
 The Kubernetes Book\\
 by Nigel Poulton\\
 2025 Edition\\
-\textcolor{gray}{Up until Chapter 10: Service discovery deep dive}
+\textcolor{gray}{Up until Chapter 11: Kubernetes storage}
 }
 \author{Summary by Emiel Bos}
 \date{}
@@ -269,18 +269,49 @@ You can scale your apps manually, either imperatively using \mintinline{console}
 
 \emph{Multi-dimensional autoscaling} is jargon for combining multiple scaling methods.
 
+\section{Namespace}
+
+You can divide a Kubernetes cluster into multiple \emph{virtual clusters} with \emph{Namespaces}.\footnote{Not to be confused with Linux kernel namespaces, which partition operating systems into virtual operating systems called containers.} The \mintinline{console}{kubectl api-resources} command prints the API resources/objects (Pods, services, deployments, etc.) supported on the server, and whether they are namespaced, i.e., whether you can deploy to specific Namespaces with custom policies and quotas. Each Namespace can have its own users, permissions, resource quotas, and policies.
+
+A \emph{tenant} is a loose term that can refer to individual applications, different teams or departments, or even external customers. Namespaces are most commonly used to divide clusters for use by tenants within the same organization, such that multiple tenants can share the same cluster. Namespaces are easy to setup and manage, but only provide soft isolation and cannot prevent compromised workloads from escaping the Namespace and impacting workloads in others. \footnote{This is why using Namespaces to divide a cluster among external tenants isn’t as common. At the time of writing, the most common way of strongly isolating tenants is to run them on their own clusters and their own hardware.} For example, a production cluster can be divided into the \mintinline{console}{finance}, \mintinline{console}{hr}, \mintinline{console}{corporate-ops}, etc. Namespaces.
+
+You can list Namespaces with the \mintinline{console}{kubectl get namespaces} or \mintinline{console}{kubectl get ns} command.\footnote{You can substitute \mintinline{console}{namespace} with \mintinline{console}{ns} when working with kubectl. You can also add \mintinline{console}{-n} or \mintinline{console}{--namespace} to kubectl commands to filter results against a specific Namespace. When working with a specific Namespace, it can be annoying having to add the \mintinline{console}{-n} or \mintinline{console}{--namespace} flag on all your kubectl commands. For this reason, you can set your kubeconfig to run all future kubectl command against a specific Namespace with \mintinline{console}{kubectl config set-context --current --namespace <namespace>}. Make sure you set it to the \mintinline{console}{default} Namespace again when you're done.} Every Kubernetes cluster has a set of pre-created Namespaces: \mintinline{console}{default} is where objects are deployed if you don't specify a Namespace, \mintinline{console}{kube-system} is where control plane components such as the internal DNS service and the metrics server run, \mintinline{console}{kube-public} is for objects that need to be readable by anyone, and \mintinline{console}{kube-node-lease} is used for node heartbeats and managing node leases. You can inspect a Namespaces on your cluster with \mintinline{console}{kubectl describe ns <namespace>}.
+
+Namespaces are first-class resources in the core v1 API group, meaning they’re stable, well-understood, and have been around for a long time. You can create a new Namespace imperatively with \mintinline{console}{kubectl create ns <namespace>} or declaratively with:
+
+\begin{minted}{yaml}
+kind: Namespace
+apiVersion: v1
+metadata:
+    name: <namespace>
+    labels:
+        env: <some_variable>
+\end{minted}
+
+and running \mintinline{console}{kubectl apply -f <file>.yml}. You delete a Namespace with \mintinline{console}{kubectl delete ns <namespace>}.\\
+You can refer to Namespaces imperatively with the aforementioned \mintinline{console}{-n} or \mintinline{console}{--namespace} flags, or declaratively:
+
+\begin{minted}{yaml}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+    namespace: <namespace>
+    name: default
+\end{minted}
+
 \section{Service}
 
-Kubernetes treats Pods as ephemeral objects and deletes them during scale-down operations, rolling updates, rollbacks, node maintenance/evictions, and failures. This constant deletion generates \emph{IP churn} and make Pods unreliable; clients cannot make reliable connections to individual Pods as Kubernetes doesn’t guarantee they’ll exist. Therefore, \emph{Services} come into play by providing a reliable DNS name, IP address and port (together forming the Service's front-end) for a dynamic group of one or more identical Pods behind it, and load balances requests to them (the Service's back-end). Services maintain a list of healthy Pods and their labels. The load balances is done using labels and selectors, exactly like how Deployments know which Pods they manage.
+Kubernetes treats Pods as ephemeral objects and deletes them during scale-down operations, rolling updates, rollbacks, node maintenance/evictions, and failures. This constant deletion generates \emph{IP churn} and make Pods unreliable; clients cannot make reliable connections to individual Pods as Kubernetes doesn’t guarantee they’ll exist. Therefore, \emph{Services} come into play by providing a reliable DNS name, IP address and port (together forming the Service's front-end) for a dynamic group of one or more identical Pods behind it, and load balances requests to them (the Service's back-end). Services maintain a list of healthy Pods and their labels. The load balancing is done using labels and selectors, exactly like how Deployments know which Pods they manage.
 
 Whenever you create a Service, Kubernetes automatically creates an associated \emph{EndpointSlice}\footnote{Older versions of Kubernetes used the functionally identical Endpoints object, but EndpointSlices perform better on large busy clusters.} to track healthy Pods with matching labels. Any new Pods matching the Service’s label selector get added to the EndpointSlice, whereas any deleted Pods get removed.
 
 There are different types of Service:
 
 \begin{enumerate}
-    \item \emph{ClusterIP} is the most basic and provides a reliable endpoint (name, IP, and port) on the internal Pod network, so they're only accessible from within the cluster. The name is automatically registered with the cluster’s internal DNS, and containers are pre-programmed to use their cluster's DNS. ClusterIP is the default if you don't specify a type.
-    \item \emph{NodePort} builds on top of ClusterIP and allow external clients to connect via a dedicated port (the \mintinline{console}{nodePort}) on every cluster node. Kubernetes will create a ClusterIP Service with the usual internally routable IP and DNS name, and publish the \mintinline{console}{nodePort} on every cluster node and map it to that ClusterIP, so that external clients can send traffic to any cluster node on their \mintinline{console}{nodePort}s, and then those nodes will forward the request to the ClusterIP Service, which in turn will forward it to one of the Pods in its EndpointSlide list. There are two limitations: this uses high-numbered ports (between 30000-32767), and clients need to know the names or IPs of nodes and whether they're healthy. This is why most people use LoadBalancer Services.
-    \item \emph{LoadBalancer} builds on top of NodePort Services and privision a highly-available load balancer with a publicly resolvable DNS name and low port number on the underlying cloud platform in front of the cluster nodes for extremely simple access from the internet.
+    \item \emph{ClusterIP} is the most basic and provides a reliable endpoint (name, IP, and port) on the internal Pod network, so they're only accessible from within the cluster. The name is automatically registered with the cluster’s internal DNS, and containers are pre-programmed to use their cluster's DNS. ClusterIP is the default if you don't specify a type.\\
+    ClusterIPs are on a special network called the service network and there are no routes to it. Therefore, every container sends ClusterIP traffic to its \emph{default gateway}, which is where a system sends network traffic when it doesn’t know where else to send it. The container’s default gateway sends the traffic to the node it’s running on, which also doesn’t have a route to the service network, so it sends it to its own default gateway, the node's kernel, which in turn redirects it to the IP of a healthy Pod matching the Service’s label selector. The node's kernel knows this because of a system service called kube-proxy that runs on every node and implements a controller watching the API server for new Services and EndpointSlice objects. Whenever it sees them, it creates rules in the kernel to intercept ClusterIP traffic and forward it to individual Pod IPs.
+    \item \emph{NodePort} builds on top of ClusterIP and allow external clients to connect via a dedicated port (the \mintinline{console}{nodePort}) on every cluster node. Kubernetes will create a ClusterIP Service with the usual internally routable IP and DNS name, and publish the \mintinline{console}{nodePort} on every cluster node and map it to that ClusterIP, so that external clients can send traffic to any cluster node on their \mintinline{console}{nodePort}s, and then those nodes will forward the request to the ClusterIP Service, which in turn will forward it to one of the Pods in its EndpointSlide list. There are two limitations: this uses high-numbered ports (between 30000-32767), and clients need to know the names or IPs of nodes and whether they're healthy. This is why most people use...
+    \item \emph{LoadBalancer} builds on top of NodePort Services and additionally provisions a highly-available load balancer with a publicly resolvable DNS name and low port number on the underlying cloud platform in front of the cluster nodes for extremely simple access from the internet.
 \end{enumerate}
 
 \begin{minted}{yaml}
@@ -298,17 +329,17 @@ spec:
       targetPort: 9000 # Application port in container
     selector:
         app: hello-world # Send traffic to Pods with this label AND...
-        version: v2 # this label.
+        version: v2 # ...this label.
 \end{minted}
 
 Applying this YAML with deploy the Service declaratively. You can also create a Service for an existing deployment imperatively with \mintinline{console}{kubectl expose deployment <deployment> --type=<type>}, which will inspect the running Deployment and by default base the port mappings and label selector on it. You can list all Services with \mintinline{console}{kubectl get svc -o wide} and see their \mintinline{console}{EXTERNAL-IP}, with which internet clients can connect.\footnote{When running locally, some Docker Desktop clusters incorrectly return a 172 IP address in the \mintinline{console}{EXTERNAL-IP} column, but it should be \mintinline{console}{localhost}.} The \mintinline{console}{CLUSTER-IP} column lists the Service’s internal IP, that’s only routable on the internal cluster network. The \mintinline{console}{PORT(S)} column shows the load balancer port first (8080) and then the NodePort (31755). The \mintinline{console}{SELECTOR} column matches the Pod labels. Kubernetes has its own system Service called \mintinline{console}{kubernetes} that exposes the Kubernetes API to all Pods and containers on the cluster. \mintinline{console}{kubectl delete svc <service>} deletes the Service. Kubernetes will automatically delete Endpoints and EndpointSlices when you delete their associated Service.\\
-The \mintinline{console}{kubectl describe svc <service>} gives more details on a specific service. \mintinline{console}{Endpoints:} is the list of healthy matching Pods from the EndpointSlice object. \textbf{Session Affinity:} by default is \mintinline{console}{None} and shows session stickiness; whether or not client connections always go to the same Pod. There's also the \mintinline{console}{ClientIP} affinity, for when your app stores state in Pods, but this is an anti-pattern. You can inspect EndpointSlices with \mintinline{console}{kubectl get endpointslices}, and get details for one with \mintinline{console}{kubectl describe endpointslice <endpointslice>}.
+The \mintinline{console}{kubectl describe svc <service>} gives more details on a specific service. \mintinline{console}{Endpoints} is the list of healthy matching Pods from the EndpointSlice object. \mintinline{console}{Session Affinity} by default is \mintinline{console}{None} and shows session stickiness; whether or not client connections always go to the same Pod. There's also the \mintinline{console}{ClientIP} affinity, for when your app stores state in Pods, but this is an anti-pattern. You can inspect EndpointSlices with \mintinline{console}{kubectl get endpointslices}, and get details for one with \mintinline{console}{kubectl describe endpointslice <endpointslice>}.
 
-\section{Ingress}
+\subsection{Ingress}
 
 Note that, during the 3+ years Ingress was in alpha and beta, service meshes increased in popularity, and there’s now some overlap in functionality. As a result, if you’re planning to deploy a service mesh, you may not need Ingress.
 
-LoadBalancer Services still have a shortcoming in that they only provide a one-to-one mapping between internal Services and cloud load balancers, so that every internet-facing apps in a cluster will need its own cloud load balancers (and they cost money and their number may be capped). \emph{Ingress} fixes this by letting you expose multiple Services through a single cloud load balancer. It does this by creating a single cloud load balancer on port 80 or 443 and using host-based and path-based routing to map connections to different Services on the cluster. Ingress only supports HTTP and HTTPS.
+LoadBalancer Services still have a shortcoming in that they only provide a one-to-one mapping between internal Services and cloud load balancers, so that every internet-facing app in a cluster will need its own cloud load balancers (and they cost money and their number may be capped). \emph{Ingress} fixes this by letting you expose multiple Services through a single cloud load balancer. It does this by creating a single cloud load balancer on port 80 or 443 and using host-based and path-based routing to map connections to different Services on the cluster. Ingress only supports HTTP and HTTPS.
 
 The Ingress API definition defines the usual two constructs: a resource to define the routing rules, and a controller to implement them. However, contrary to Deployments, ReplicaSets, Services, and most other resources that have built-in pre-configured controllers, Kubernetes doesn’t have a built-in Ingress controller, meaning you need to install one. However, some cloud platforms simplify this by allowing you to install one when you build the cluster. A popular one is the NGINX Ingress controller, which you can install with \mintinline{console}{https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v<latest_version>/deploy/static/provider/cloud/deploy.yaml}.\footnote{This will install a bunch of Kubernetes constructs: a Namespace, ServiceAccounts, ConfigMaps, Roles, RoleBindings, etc. It will deploy a controller Pods and some short-lived Pods that initialize the environment.}
 
@@ -349,37 +380,25 @@ spec:
 
 You list ingress objects with \mintinline{console}{kubectl get ing}. The \mintinline{console}{CLASS} field may show as \mintinline{console}{<None>} if you only have one Ingress controller and didn’t configure classes. \mintinline{console}{HOSTS} is a list of hostnames the Ingress will handle traffic for. \mintinline{console}{ADDRESS} field is the load balancer endpoint. You get details with \mintinline{console}{kubectl describe ing <ingress>}. \mintinline{console}{Default backend} is where the controller sends traffic arriving on a hostname/path it doesn’t have a route for. Not all Ingress controllers implement a default backend. The \mintinline{console}{Rules} section defines the mappings between hosts/paths and backends. You can probably view your created load balancer through your cloud console GUI if you’re on a cloud platform. You’ll have to configure your DNS (either internal or internet-based) to point host-names to the Ingress load balancer.\footnote{For running locally, you can edit \mintinline{console}{/etc/hosts} (for Mac or Linux) or \mintinline{console}{C:\Windows\System32\drivers\etc\hosts} (for Windows) to add DNS mappings. This file acts as a local DNS override; when you try to access a domain, the system checks the hosts file first, before querying DNS servers on the internet.}
 
-\section{Namespace}
+\subsection{Cluster DNS}
 
-You can divide a Kubernetes cluster into multiple \emph{virtual clusters} with \emph{Namespaces}.\footnote{Not to be confused with Linux kernel namespaces, which partition operating systems into virtual operating systems called containers.} The \mintinline{console}{kubectl api-resources} command prints the API resources/objects (Pods, services, deployments, etc.) supported on the server, and whether they are namespaced, i.e., whether you can deploy to specific Namespaces with custom policies and quotas. Each Namespace can have its own users, permissions, resource quotas, and policies\\
-A \emph{tenant} is a loose term that can refer to individual applications, different teams or departments, or even external customers. Namespaces are most commonly used to divide clusters for use by tenants within the same organization, such that multiple tenants can share the same cluster. Namespaces are easy to setup and manage, but only provide soft isolation and cannot prevent compromised workloads from escaping the Namespace and impacting workloads in others. \footnote{This is why using Namespaces to divide a cluster among external tenants isn’t as common. At the time of writing, the most common way of strongly isolating tenants is to run them on their own clusters and their own hardware.} For example, a production cluster can be divided into the \mintinline{console}{finance}, \mintinline{console}{hr}, \mintinline{console}{corporate-ops}, etc. Namespaces.
+Kubernetes clusters run hundreds or thousands of microservices apps, each behind their own Service and with their own reliable name and IP. When we colloquially say an app needs to find or talk to another app, we mean it needs
+to find or talk to the Service in front of that app. For this, an app needs the name of the other app -- supplied by the developer in code or configuration/YAML -- and be able to translate it to an IP -- done by Kubernetes with a lookup into the \emph{service registry} aka the \emph{cluster DNS}, a list of Service names and their associated IP addresses. It runs in each cluster as a (Kubernetes-native) application in the control plane on two or more Pods\footnote{The Pods normally use the \mintinline{console}{registry.k8s.io/coredns/coredns} image, but some other clusters use a different image.} managed by a Deployment and fronted by its own Service. The Deployment is usually called \mintinline{console}{console}tbf{coredns}\footnote{Some other clusters may call it \mintinline{console}{kube-dns}}, and the Service is always called \mintinline{console}{kube-dns}. All of these objects are in the \mintinline{console}{kube-system} Namespace and tagged with the \mintinline{console}{k8s-app=kube-dns} label to help you find them.
 
-You can list Namespaces with the \mintinline{console}{kubectl get namespaces} or \mintinline{console}{kubectl get ns} command.\footnote{You can substitute \mintinline{console}{namespace} with \mintinline{console}{ns} when working with kubectl. You can also add \mintinline{console}{-n} or \mintinline{console}{--namespace} to kubectl commands to filter results against a specific Namespace. When working with a specific Namespace, it can be annoying having to add the \mintinline{console}{-n} or \mintinline{console}{--namespace} flag on all your kubectl commands. For this reason, you can set your kubeconfig to run all future kubectl command against a specific Namespace with \mintinline{console}{kubectl config set-context --current --namespace <namespace>}. Make sure you set it to the \mintinline{console}{default} Namespace again when you're done.} Every Kubernetes cluster has a set of pre-created Namespaces: \mintinline{console}{default} is where objects are deployed if you don't specify a Namespace, \mintinline{console}{kube-system} is where control plane components such as the internal DNS service and the metrics server run, \mintinline{console}{kube-public} is for objects that need to be readable by anyone, and \mintinline{console}{kube-node-lease} is used for node heartbeats and managing node leases. You can inspect a Namespaces on your cluster with \mintinline{console}{kubectl describe ns <namespace>}.
+The \emph{cluster address space}, aka the \emph{cluster domain}, is the DNS domain in a cluster. On most clusters, it’s \emph{cluster.local}, Every Kubernetes object gets a name in it. \emph{Unqualified names} are short names for Services, e.g. \mintinline{text}{ent}. \emph{Fully qualified domain names} (FQDN) are long "official" names of the form \mintinline{text}{<object-name>.<namespace>.svc.cluster.local}, e.g. \mintinline{text}{ent.default.svc.cluster.local}. The default namespace is \mintinline{text}{default}. You can use Namespaces to partition the address space below the cluster domain, e.g. \mintinline{text}{<service-name>.dev.svc.cluster.local} and \mintinline{text}{<service-name>.prod.svc.cluster.local}. Kubernetes object names must be unique within a Namespace (but not across Namespaces). Apps can use unqualified (short) names to connect to Services in the same Namespace, but they must use fully qualified domain names to connect to Services in remote Namespaces.
 
-Namespaces are first-class resources in the core v1 API group, meaning they’re stable, well-understood, and have been around for a long time. You can work with them imperatively via the CLI and declaratively via YAML config files. You can create a new Namespace imperatively with \mintinline{console}{kubectl create ns <namespace>} or declaratively with:
+Service registration is automatic in Kubernetes. If you give your Service a name and deploy it as part of an app, Kubernetes assigns the Service an IP, and the cluster DNS registers the name and IP when it sees the new Service.\\
+Service resolution is also automatic. Every container is automatically configured to use the cluster DNS's Service's IP for registration and resolution by adding it to every container's \mintinline{console}{/etc/resolv.conf} file, which looks something like this:
 
-\begin{minted}{yaml}
-kind: Namespace
-apiVersion: v1
-metadata:
-    name: <namespace>
-    labels:
-        env: <some_variable>
+\begin{minted}{text}
+search default.svc.cluster.local svc.cluster.local cluster.local # Search domains
+nameserver 10.96.0.10 # ClusterIP of internal cluster DNS
+options ndots:5
 \end{minted}
 
-and running \mintinline{console}{kubectl apply -f <file>.yml}. You delete a Namespace with \mintinline{console}{kubectl delete ns <namespace>}.\\
-You can refer to Namespaces imperatively with the aforementioned \mintinline{console}{-n} or \mintinline{console}{--namespace} flags, or declaratively:
+The search domains are appended to unqualified names to form a fully qualified domain name. \mintinline{console}{/etc/resolv.conf} and its IP for the cluster DNS allows the container to convert a name to an IP address of the target Service’s ClusterIP, so that the container can send traffic there. Since ClusterIPs are on the service network and the container doesn’t have a route to it, it sends it to its default gateway, which forwards it to the node it’s running on, which also doesn’t have a route either, so it sends it to its own default gateway, which is the node’s kernel, which processes the request and redirect it to the IP address of a Pod that matches the Service’s label selector.
 
-\begin{minted}{yaml}
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-    namespace: <namespace>
-    name: default
-\end{minted}
-
-
-
+For troubleshooting DNS problems, the \href{registry.k8s.io/e2e-test-images/jessie-dnsutils}{jessie-dnsutils} image is a popular choice as troubleshooting pod, which has ping, traceroute, curl, dig, nslookup, etc. installed.
 
 
 \end{document}
