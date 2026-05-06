@@ -388,12 +388,14 @@ You can refer to tables as \mintinline{sql}{schema.table}, or, even more general
 
 \subsection{\mintinline{sql}{CREATE INDEX}}
 
-Indexes are used to retrieve data from the database more quickly than otherwise. You create an index on the specified column(s) of the specified table as follows:
+Create indexes on other columns beside the primary key. Indexes are used to retrieve data from the database more quickly than otherwise, and are generally implemented as B-trees. You create an index on the specified column(s) of the specified table as follows:
 
 \begin{minted}{sql}
-CREATE [UNIQUE] INDEX <index_name>
+CREATE [UNIQUE] INDEX <index_name> [USING <index>]
 ON <table_name> (<column1>, <column2>, ...); 
 \end{minted}
+
+You can specify the index implementation, but the default is generally a B-tree.
 
 In a regular index, duplicate values are allowed. In a unique index, they aren't. Indices speed up reads, but make writes slower. When the \textit{WHERE} clause is present, a partial index is created, for only a portion of a table.
 
